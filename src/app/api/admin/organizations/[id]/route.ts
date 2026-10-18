@@ -10,12 +10,12 @@ async function requireOwner() {
   return { session, userId };
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const authResult = await requireOwner();
   if (!authResult) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { action, reason } = await req.json();
-  const id = params.id;
+  const { id } = await params;
 
   const updates: any = {};
   if (action === "approve") {

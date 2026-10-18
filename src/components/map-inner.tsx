@@ -14,13 +14,13 @@ L.Icon.Default.mergeOptions({
 
 export default function MapInner({ locations }: { locations: { lat: number; lng: number; label: string }[] }) {
   return (
-    <MapContainer center={[39, -98]} zoom={4} style={{ height: "100%", width: "100%" }}>
+    <MapContainer center={[39, -98] as any} zoom={4} style={{ height: "100%", width: "100%" }}>
       <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
+        attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {locations.map((loc, i) => (
-        <Marker key={i} position={[loc.lat, loc.lng]}>
+        <Marker key={i} position={[loc.lat, loc.lng] as any}>
           <Popup>{loc.label}</Popup>
         </Marker>
       ))}
