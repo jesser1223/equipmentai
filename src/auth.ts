@@ -12,21 +12,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-          include: { organization: true },
-        });
-        if (!user) return null;
-        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
-        if (!valid) return null;
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          organizationId: user.organizationId,
-          organizationName: user.organization.name,
-          organizationStatus: user.organization.status,
-        };
+        const email = (credentials.email as string).trim().toLowerCase();
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email },
+            include: { organization: true },
+          });
+          if (!user) {
+            console.log("[auth] user not found:", email);
+            return null;
+          }
+          const valid = await bcrypt.compare(credentials.password as string, user.passwordHash);
+          if (!valid) {
+            console.log("[auth] password mismatch for:", email);
+            return null;
+          }
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            organizationId: user.organizationId,
+            organizationName: user.organization.name,
+            organizationStatus: user.organization.status,
+          };
+        } catch (err) {
+          console.error("[auth] database error during login:", err);
+          return null;
+        }
       },
     }),
   ],

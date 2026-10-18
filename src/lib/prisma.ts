@@ -9,3 +9,8 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+// Help serverless environments avoid lingering connections
+if (process.env.NODE_ENV === "production") {
+  prisma.$connect().catch(() => {});
+}
