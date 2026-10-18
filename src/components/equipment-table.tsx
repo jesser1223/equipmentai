@@ -34,7 +34,7 @@ export function EquipmentTable() {
         <div className="p-6 text-sm text-muted-foreground">No equipment yet. Add some from the Equipment page.</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[500px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 <th className="px-6 py-3">Asset</th>

@@ -159,7 +159,7 @@ export default function InvoicesPage() {
         {loading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div> : invoices.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No invoices yet.</div>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Number</th>
