@@ -10,7 +10,12 @@ export default function InvoicesPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [wizardStep, setWizardStep] = useState(1);
   const [showForm, setShowForm] = useState(false);
+  const [equipmentList, setEquipmentList] = useState<any[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
+  const [equipmentHours, setEquipmentHours] = useState<Record<string, number>>({});
+  const [selectedAttachments, setSelectedAttachments] = useState<Record<string, number>>({});
   const [form, setForm] = useState({ customerId: "", dueDate: "", notes: "", description: "", quantity: 1, rate: 0 });
   const [toDelete, setToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
@@ -22,14 +27,16 @@ export default function InvoicesPage() {
 
   const load = async () => {
     setLoading(true);
-    const [inv, cust, jobRes] = await Promise.all([
+    const [inv, cust, jobRes, eqRes] = await Promise.all([
       fetch("/api/invoices").then((r) => r.json()),
       fetch("/api/customers").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
+      fetch("/api/equipment").then((r) => r.json()),
     ]);
     setInvoices(Array.isArray(inv) ? inv : []);
     setCustomers(Array.isArray(cust) ? cust : []);
     setJobs(Array.isArray(jobRes) ? jobRes : []);
+    setEquipmentList(Array.isArray(eqRes) ? eqRes : []);
     setLoading(false);
   };
 
@@ -137,22 +144,93 @@ export default function InvoicesPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={create} className="space-y-3 rounded-xl border border-border bg-card p-4">
-          <select required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
-            <option value="">Select customer</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <input required placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-          <div className="grid grid-cols-2 gap-3">
-            <input type="number" step="0.01" placeholder="Quantity" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-            <input type="number" step="0.01" placeholder="Rate" value={form.rate} onChange={(e) => setForm({ ...form, rate: Number(e.target.value) })} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+        <Modal open={showForm} onClose={() => setShowForm(false)} title="Generate Invoice">
+          <div className="mb-4 flex gap-2 text-xs">
+            {[1, 2, 3].map((s) => (
+              <span key={s} className={`rounded-full px-2 py-1 ${wizardStep === s ? "bg-accent text-accent-foreground" : "bg-white/10"}`}>
+                Step {s}
+              </span>
+            ))}
           </div>
-          <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-          <div className="flex gap-2">
-            <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground">Save</button>
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
+
+          {wizardStep === 1 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Customer and Job</h3>
+              <label className="text-xs text-muted-foreground">Customer *</label>
+              <select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
+                <option value="">Select customer</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <label className="text-xs text-muted-foreground">Job (optional)</label>
+              <select value={genJobId} onChange={(e) => setGenJobId(e.target.value)} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
+                <option value="">None</option>
+                {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
+              </select>
+              <label className="text-xs text-muted-foreground">Description</label>
+              <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              <label className="text-xs text-muted-foreground">Due Date</label>
+              <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+          )}
+
+          {wizardStep === 2 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Equipment and Attachments</h3>
+              <p className="text-xs text-muted-foreground">Select machines and enter hours. Attachments will appear once the equipment API includes them.</p>
+              {equipmentList.map((eq: any) => (
+                <label key={eq.id} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedEquipment.includes(eq.id)}
+                    onChange={(e) => {
+                      setSelectedEquipment((prev) => e.target.checked ? [...prev, eq.id] : prev.filter((id) => id !== eq.id));
+                    }}
+                  />
+                  {eq.name} ({eq.unitNumber}) — ${eq.hourlyRate}/hr
+                  {selectedEquipment.includes(eq.id) && (
+                    <input
+                      type="number"
+                      step="0.1"
+                      placeholder="Hours"
+                      value={equipmentHours[eq.id] || ""}
+                      onChange={(e) => setEquipmentHours({ ...equipmentHours, [eq.id]: Number(e.target.value) })}
+                      className="ml-2 w-20 rounded border border-border bg-background px-2 py-1 text-sm"
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+
+          {wizardStep === 3 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Review</h3>
+              <p className="text-sm">Customer: {customers.find((c) => c.id === form.customerId)?.name || "—"}</p>
+              <p className="text-sm">Description: {form.description || "—"}</p>
+              <div className="space-y-1 text-sm">
+                {selectedEquipment.map((id) => {
+                  const eq = equipmentList.find((e: any) => e.id === id);
+                  const hrs = equipmentHours[id] || 0;
+                  const amt = hrs * (eq?.hourlyRate || 0);
+                  return <div key={id}>{eq?.name}: {hrs} hrs × ${eq?.hourlyRate} = ${amt.toFixed(2)}</div>;
+                })}
+              </div>
+              <p className="font-medium">Estimated total: ${selectedEquipment.reduce((s, id) => {
+                const eq = equipmentList.find((e: any) => e.id === id);
+                return s + (equipmentHours[id] || 0) * (eq?.hourlyRate || 0);
+              }, 0).toFixed(2)}</p>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-between">
+            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-muted-foreground">Cancel</button>
+            <div className="flex gap-2">
+              {wizardStep > 1 && <button type="button" onClick={() => setWizardStep((s) => s - 1)} className="rounded border border-border px-3 py-1.5 text-sm">Back</button>}
+              {wizardStep < 3 && <button type="button" onClick={() => setWizardStep((s) => s + 1)} className="rounded bg-accent px-3 py-1.5 text-sm text-accent-foreground">Continue</button>}
+              {wizardStep === 3 && <button type="button" onClick={create} className="rounded bg-accent px-3 py-1.5 text-sm text-accent-foreground">Generate Invoice</button>}
+            </div>
           </div>
-        </form>
+        </Modal>
       )}
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
