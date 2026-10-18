@@ -83,7 +83,6 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      {/* Schedule Overview */}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Schedule Overview</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -93,7 +92,6 @@ export default function SchedulePage() {
         </div>
       </section>
 
-      {/* Filters */}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Filters</h2>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
@@ -104,7 +102,6 @@ export default function SchedulePage() {
         </select>
       </section>
 
-      {/* Scheduled Jobs */}
       <section>
         <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Scheduled Jobs</h2>
         {filtered.length === 0 ? (
@@ -122,91 +119,89 @@ export default function SchedulePage() {
         )}
       </section>
 
-      {showForm && (
-        <Modal title="Schedule a Job" onClose={() => setShowForm(false)}>
-          <form onSubmit={create} className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
-            {error && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Schedule a Job">
+        <form onSubmit={create} className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+          {error && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Customer Information</h3>
-              <label className="text-xs text-muted-foreground">Customer *</label>
-              <select required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
-                <option value="">Select customer</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-              {selectedCustomer && (
-                <p className="text-xs text-muted-foreground">{selectedCustomer.email || "No email"} · {selectedCustomer.phone || "No phone"}</p>
-              )}
-            </section>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Customer Information</h3>
+            <label className="text-xs text-muted-foreground">Customer *</label>
+            <select required value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
+              <option value="">Select customer</option>
+              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            {selectedCustomer && (
+              <p className="text-xs text-muted-foreground">{selectedCustomer.email || "No email"} · {selectedCustomer.phone || "No phone"}</p>
+            )}
+          </section>
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Job Details</h3>
-              <label className="text-xs text-muted-foreground">Job Title *</label>
-              <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-              <label className="text-xs text-muted-foreground">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
-              <label className="text-xs text-muted-foreground">Status</label>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
-                <option>Scheduled</option>
-                <option>In Progress</option>
-                <option>Completed</option>
-              </select>
-            </section>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Job Details</h3>
+            <label className="text-xs text-muted-foreground">Job Title *</label>
+            <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            <label className="text-xs text-muted-foreground">Description</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
+            <label className="text-xs text-muted-foreground">Status</label>
+            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
+              <option>Scheduled</option>
+              <option>In Progress</option>
+              <option>Completed</option>
+            </select>
+          </section>
 
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Job Location</h3>
-              <p className="text-[11px] text-muted-foreground">Job-site address (not the billing address or equipment location).</p>
-              <label className="text-xs text-muted-foreground">Job-site Address</label>
-              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Latitude (optional)</label>
-                  <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Longitude (optional)</label>
-                  <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-                </div>
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Job Location</h3>
+            <p className="text-[11px] text-muted-foreground">Job-site address (not the billing address or equipment location).</p>
+            <label className="text-xs text-muted-foreground">Job-site Address</label>
+            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Latitude (optional)</label>
+                <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
               </div>
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Schedule</h3>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Start Date</label>
-                  <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">End Date</label>
-                  <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-                </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Longitude (optional)</label>
+                <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
               </div>
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Equipment and Assignments</h3>
-              <label className="text-xs text-muted-foreground">Equipment</label>
-              <select value={form.equipmentId} onChange={(e) => setForm({ ...form, equipmentId: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
-                <option value="">None</option>
-                {equipment.map((eq) => <option key={eq.id} value={eq.id}>{eq.name} ({eq.unitNumber})</option>)}
-              </select>
-            </section>
-
-            <section className="space-y-2">
-              <h3 className="text-sm font-semibold">Notes</h3>
-              <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} placeholder="Access instructions, timing notes…" />
-            </section>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
-              <button type="submit" disabled={saving} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
-                {saving ? "Scheduling…" : "Schedule Job"}
-              </button>
             </div>
-          </form>
-        </Modal>
-      )}
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Schedule</h3>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Start Date</label>
+                <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">End Date</label>
+                <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Equipment and Assignments</h3>
+            <label className="text-xs text-muted-foreground">Equipment</label>
+            <select value={form.equipmentId} onChange={(e) => setForm({ ...form, equipmentId: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
+              <option value="">None</option>
+              {equipment.map((eq) => <option key={eq.id} value={eq.id}>{eq.name} ({eq.unitNumber})</option>)}
+            </select>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Notes</h3>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} placeholder="Access instructions, timing notes…" />
+          </section>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowForm(false)} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
+            <button type="submit" disabled={saving} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
+              {saving ? "Scheduling…" : "Schedule Job"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
