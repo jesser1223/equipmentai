@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0b0f19;
+  --color-foreground: #f8fafc;
+  --color-card: #1a2030;
+  --color-card-foreground: #f8fafc;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-accent: #22d3ee;
+  --color-accent-foreground: #0b0f19;
+  --color-muted: #94a3b8;
+  --color-muted-foreground: #64748b;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-sidebar: #111827;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+}
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --border: #e2e8f0;
+    --accent: #06b6d4;
+    --muted: #64748b;
+  }
+
+  .dark {
+    --background: #0b0f19;
+    --foreground: #f8fafc;
+    --card: #1a2030;
+    --card-foreground: #f8fafc;
+    --border: rgba(255, 255, 255, 0.08);
+    --accent: #22d3ee;
+    --muted: #94a3b8;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Leaflet dark mode adjustments */
+.dark .leaflet-container {
+  background: #0f172a;
+}
+.dark .leaflet-popup-content-wrapper {
+  background: #1e293b;
+  color: #f8fafc;
+}
