@@ -4,11 +4,13 @@ import { prisma } from "@/lib/prisma";
 
 async function requireOwner() {
   const session = await auth();
+  if (!session) return null;
   const ownerId = process.env.OWNER_USER_ID;
-  const userId = (session?.user as any)?.id;
-  if (!session || !ownerId || userId !== ownerId) {
-    return null;
-  }
+  const userId = (session.user as any)?.id;
+  const email = (session.user?.email || "").toLowerCase();
+  const ownerEmails = ["admin@equipmentai.com", "jessereinink260@gmail.com"];
+  const isOwner = (ownerId && userId === ownerId) || ownerEmails.includes(email);
+  if (!isOwner) return null;
   return session;
 }
 
