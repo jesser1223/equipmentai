@@ -59,10 +59,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       // Always recompute owner flag (user is only present on initial sign-in)
       const ownerId = process.env.OWNER_USER_ID;
-      const email = (user as any)?.email || (token as any).email;
+      const email = ((user as any)?.email || (token as any).email || "").toLowerCase();
+      const ownerEmails = ["admin@equipmentai.com", "jessereinink260@gmail.com"];
       token.isOwner = ownerId
-        ? token.sub === ownerId || (user as any)?.id === ownerId
-        : email === "admin@equipmentai.com";
+        ? token.sub === ownerId || (user as any)?.id === ownerId || ownerEmails.includes(email)
+        : ownerEmails.includes(email);
       return token;
     },
     async session({ session, token }) {
