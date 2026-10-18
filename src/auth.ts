@@ -11,7 +11,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log("[auth] missing credentials");
+          return null;
+        }
         const email = (credentials.email as string).trim().toLowerCase();
         try {
           const user = await prisma.user.findUnique({
@@ -27,6 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             console.log("[auth] password mismatch for:", email);
             return null;
           }
+          console.log("[auth] login success:", email);
           return {
             id: user.id,
             email: user.email,
@@ -35,8 +39,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             organizationName: user.organization.name,
             organizationStatus: user.organization.status,
           };
-        } catch (err) {
-          console.error("[auth] database error during login:", err);
+        } catch (err: any) {
+          console.error("[auth] database error:", err.message);
           return null;
         }
       },
