@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Customer = { id: string; name: string };
 type Equipment = { id: string; name: string; unitNumber: string; hourlyRate: number };
@@ -14,6 +15,8 @@ export default function QuotesPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [toDelete, setToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [q, c, e] = await Promise.all([
@@ -69,6 +72,11 @@ export default function QuotesPage() {
                   <td className="px-4 py-3">{q.jobName}</td>
                   <td className="px-4 py-3">{q.status}</td>
                   <td className="px-4 py-3">${q.total.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => setToDelete(q)} className="text-muted-foreground hover:text-danger">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -88,6 +96,30 @@ export default function QuotesPage() {
           }}
         />
       </Modal>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete quote?"
+        description={`Permanently delete quote ${toDelete?.number}? This cannot be undone.`}
+        confirmLabel="Delete Quote"
+        danger
+        loading={deleting}
+        onCancel={() => setToDelete(null)}
+        onConfirm={async () => {
+          if (!toDelete) return;
+          setDeleting(true);
+          const res = await fetch(`/api/quotes/${toDelete.id}`, { method: "DELETE" });
+          setDeleting(false);
+          if (res.ok) {
+            setToDelete(null);
+            load();
+          } else {
+            const data = await res.json();
+            alert(data.error || "Could not delete");
+            setToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }

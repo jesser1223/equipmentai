@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function SchedulePage() {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -25,6 +26,8 @@ export default function SchedulePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [toDelete, setToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [j, c, e] = await Promise.all([
@@ -109,10 +112,15 @@ export default function SchedulePage() {
         ) : (
           <div className="space-y-2">
             {filtered.map((j) => (
-              <div key={j.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="font-medium">{j.title}</div>
-                <div className="text-sm text-muted-foreground">{j.customer?.name || "No customer"} · {j.location || "No job-site address"}</div>
-                <div className="text-xs text-muted-foreground">{j.startDate ? new Date(j.startDate).toLocaleDateString() : "Unscheduled"} · {j.status}</div>
+              <div key={j.id} className="flex items-start justify-between rounded-xl border border-border bg-card p-4">
+                <div>
+                  <div className="font-medium">{j.title}</div>
+                  <div className="text-sm text-muted-foreground">{j.customer?.name || "No customer"} · {j.location || "No job-site address"}</div>
+                  <div className="text-xs text-muted-foreground">{j.startDate ? new Date(j.startDate).toLocaleDateString() : "Unscheduled"} · {j.status}</div>
+                </div>
+                <button onClick={() => setToDelete(j)} className="text-muted-foreground hover:text-danger" title="Delete">
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             ))}
           </div>
@@ -202,6 +210,30 @@ export default function SchedulePage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title="Delete job?"
+        description={`Permanently delete "${toDelete?.title}"? This cannot be undone.`}
+        confirmLabel="Delete Job"
+        danger
+        loading={deleting}
+        onCancel={() => setToDelete(null)}
+        onConfirm={async () => {
+          if (!toDelete) return;
+          setDeleting(true);
+          const res = await fetch(`/api/jobs/${toDelete.id}`, { method: "DELETE" });
+          setDeleting(false);
+          if (res.ok) {
+            setToDelete(null);
+            load();
+          } else {
+            const data = await res.json();
+            alert(data.error || "Could not delete");
+            setToDelete(null);
+          }
+        }}
+      />
     </div>
   );
 }
