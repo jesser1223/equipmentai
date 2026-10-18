@@ -5,7 +5,10 @@ import bcrypt from "bcryptjs";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const email = (body.email as string).trim().toLowerCase();
+    const name = (body.name as string)?.trim();
+    const companyName = (body.companyName as string)?.trim();
+    const email = (body.email as string)?.trim().toLowerCase();
+    const password = body.password as string;
 
     if (!name || !email || !password || !companyName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, userId: user.id });
   } catch (e: any) {
-    console.error(e);
+    console.error("[signup] error:", e);
     return NextResponse.json({ error: "Could not create account" }, { status: 500 });
   }
 }
