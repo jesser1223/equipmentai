@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 
+type Attachment = {
+  name: string;
+  manufacturer: string;
+  model: string;
+  serialNumber: string;
+  billingMethod: string;
+  rate: string;
+  notes: string;
+};
+
 type EquipmentFormData = {
   name: string;
   category: string;
@@ -19,6 +29,7 @@ type EquipmentFormData = {
   longitude: string;
   hourMeter: string;
   notes: string;
+  attachments: Attachment[];
 };
 
 const empty: EquipmentFormData = {
@@ -38,6 +49,7 @@ const empty: EquipmentFormData = {
   longitude: "",
   hourMeter: "",
   notes: "",
+  attachments: [],
 };
 
 export function EquipmentForm({
@@ -112,6 +124,88 @@ export function EquipmentForm({
           rows={3}
         />
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Attachments</h3>
+          <button
+            type="button"
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                attachments: [
+                  ...f.attachments,
+                  { name: "", manufacturer: "", model: "", serialNumber: "", billingMethod: "hourly", rate: "0", notes: "" },
+                ],
+              }))
+            }
+            className="text-xs text-accent"
+          >
+            + Add Attachment
+          </button>
+        </div>
+        {form.attachments.length === 0 && (
+          <p className="text-xs text-muted-foreground">No attachments yet. Add buckets, breakers, or other tools that bill with this machine.</p>
+        )}
+        {form.attachments.map((att, i) => (
+          <div key={i} className="space-y-2 rounded-lg border border-border p-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <input
+                placeholder="Attachment name *"
+                value={att.name}
+                onChange={(e) => {
+                  const next = [...form.attachments];
+                  next[i].name = e.target.value;
+                  setForm({ ...form, attachments: next });
+                }}
+                className="rounded border border-border bg-background px-2 py-1 text-sm"
+              />
+              <select
+                value={att.billingMethod}
+                onChange={(e) => {
+                  const next = [...form.attachments];
+                  next[i].billingMethod = e.target.value;
+                  setForm({ ...form, attachments: next });
+                }}
+                className="rounded border border-border bg-background px-2 py-1 text-sm"
+              >
+                <option value="hourly">Hourly</option>
+                <option value="daily">Daily</option>
+                <option value="per-job">Per Job</option>
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Rate"
+                value={att.rate}
+                onChange={(e) => {
+                  const next = [...form.attachments];
+                  next[i].rate = e.target.value;
+                  setForm({ ...form, attachments: next });
+                }}
+                className="rounded border border-border bg-background px-2 py-1 text-sm"
+              />
+              <input
+                placeholder="Notes"
+                value={att.notes}
+                onChange={(e) => {
+                  const next = [...form.attachments];
+                  next[i].notes = e.target.value;
+                  setForm({ ...form, attachments: next });
+                }}
+                className="rounded border border-border bg-background px-2 py-1 text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, attachments: form.attachments.filter((_, idx) => idx !== i) })}
+              className="text-xs text-danger"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </section>
 
       <div className="flex justify-end gap-3 pt-2">
         <button type="button" onClick={onCancel} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-white/5">

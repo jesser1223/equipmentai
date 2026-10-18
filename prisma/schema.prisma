@@ -30,6 +30,7 @@ model Organization {
 
   users          User[]
   equipment      Equipment[]
+  attachments    Attachment[]
   customers      Customer[]
   quotes         Quote[]
   jobs           Job[]
@@ -88,8 +89,28 @@ model Equipment {
 
   quoteLines    QuoteLine[]
   jobs          Job[]
+  attachments   Attachment[]
 
   @@unique([organizationId, unitNumber])
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  name          String
+  manufacturer  String?
+  model         String?
+  serialNumber  String?
+  billingMethod String   @default("hourly") // hourly, daily, per-job
+  rate          Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  equipmentId   String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 }
 
 model Customer {
