@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/auth.config";
 import { NextResponse } from "next/server";
 
 const PUBLIC = ["/login", "/signup", "/forgot-password", "/pending", "/denied"];
@@ -18,12 +18,7 @@ export default auth((req) => {
 
   // Super-admin gate for /admin
   if (path.startsWith("/admin")) {
-    const ownerId = process.env.OWNER_USER_ID;
-    const userId = req.auth?.user && (req.auth.user as any).id;
-    const email = req.auth?.user?.email;
-    const isOwner = ownerId
-      ? userId === ownerId
-      : email === "admin@equipmentai.com";
+    const isOwner = (req.auth?.user as any)?.isOwner;
     if (!isOwner) {
       return NextResponse.redirect(new URL("/", req.nextUrl));
     }
