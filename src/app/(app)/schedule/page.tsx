@@ -215,10 +215,9 @@ export default function SchedulePage() {
         open={!!toDelete}
         title="Delete job?"
         description={`Permanently delete "${toDelete?.title}"? This cannot be undone.`}
-        confirmLabel="Delete Job"
-        danger
+        confirmLabel="Delete"
         loading={deleting}
-        onCancel={() => setToDelete(null)}
+        onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return;
           setDeleting(true);
