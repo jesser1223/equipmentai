@@ -101,7 +101,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await resend.emails.send({
       from: `${fromName} <${process.env.RESEND_FROM || "onboarding@resend.dev"}>`,
       to,
-      reply_to: replyTo || undefined,
+      replyTo: replyTo || undefined,
       subject: `Invoice ${invoice.number} from ${fromName}`,
       html,
     });
