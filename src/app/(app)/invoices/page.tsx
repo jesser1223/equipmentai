@@ -442,6 +442,12 @@ export default function InvoicesPage() {
           </div>
         </div>
       </Modal>
+
+      {emailSuccess && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-xl border border-accent/40 bg-card px-5 py-3 text-sm font-medium shadow-lg">
+          Invoice sent
+        </div>
+      )}
     </div>
   );
 }
