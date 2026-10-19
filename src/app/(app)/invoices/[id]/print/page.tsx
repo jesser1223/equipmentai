@@ -43,13 +43,12 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <div className="header">
           <div>
             <div className="company">{invoice.organization.name}</div>
-            <div style={{ fontSize: 13, color: "#555" }}>{invoice.organization.billingEmail}</div>
-            <div style={{ fontSize: 13, color: "#555" }}>{invoice.organization.phone}</div>
+            <div style={{ fontSize: 13, color: "#555" }}>{invoice.organization.phone || ""}</div>
           </div>
           <div className="meta">
             <div style={{ fontSize: 24, fontWeight: 700 }}>INVOICE</div>
             <div>{invoice.number}</div>
-            <div>Issued: {new Date(invoice.issuedDate).toLocaleDateString()}</div>
+            <div>Issued: {new Date(invoice.issueDate).toLocaleDateString()}</div>
             {invoice.dueDate && <div>Due: {new Date(invoice.dueDate).toLocaleDateString()}</div>}
             <div>Status: {invoice.status}</div>
           </div>
