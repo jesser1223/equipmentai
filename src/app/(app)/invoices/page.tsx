@@ -427,7 +427,8 @@ export default function InvoicesPage() {
                 setEmailing(false);
                 if (res.ok) {
                   setEmailTarget(null);
-                  alert("Invoice emailed");
+                  setEmailSuccess(true);
+                  setTimeout(() => setEmailSuccess(false), 3000);
                 } else {
                   alert(data.error || "Failed to send");
                 }
