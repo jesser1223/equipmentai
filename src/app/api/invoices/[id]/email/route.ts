@@ -3,6 +3,69 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 
+function buildHtml(invoice: any, paid: number, balance: number) {
+  const lines = invoice.lines
+    .map(
+      (l: any) =>
+        `<tr>
+          <td style="padding:10px;border-bottom:1px solid #e5e7eb">${l.description}</td>
+          <td style="padding:10px;border-bottom:1px solid #e5e7eb">${l.quantity}</td>
+          <td style="padding:10px;border-bottom:1px solid #e5e7eb">${l.unit}</td>
+          <td style="padding:10px;border-bottom:1px solid #e5e7eb">$${l.rate.toFixed(2)}</td>
+          <td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:right">$${l.amount.toFixed(2)}</td>
+        </tr>`
+    )
+    .join("");
+  const org = invoice.organization;
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:system-ui,sans-serif;background:#f4f4f5;margin:0;padding:24px;color:#111">
+  <div style="max-width:680px;margin:0 auto;background:#fff;padding:40px;border-radius:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:28px">
+      <div>
+        ${org.logoUrl ? `<img src="${org.logoUrl}" alt="" style="height:48px;margin-bottom:8px"/>` : ""}
+        <div style="font-size:22px;font-weight:700">${org.name}</div>
+        ${org.address ? `<div style="font-size:13px;color:#555">${org.address}</div>` : ""}
+        ${org.phone ? `<div style="font-size:13px;color:#555">${org.phone}</div>` : ""}
+        ${org.email ? `<div style="font-size:13px;color:#555">${org.email}</div>` : ""}
+        ${org.gstNumber ? `<div style="font-size:13px;color:#555">GST: ${org.gstNumber}</div>` : ""}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:26px;font-weight:700;color:#0d9488">INVOICE</div>
+        <div style="font-size:14px">${invoice.number}</div>
+        <div style="font-size:13px">Issued ${new Date(invoice.issueDate).toLocaleDateString()}</div>
+        ${invoice.dueDate ? `<div style="font-size:13px">Due ${new Date(invoice.dueDate).toLocaleDateString()}</div>` : ""}
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:600;color:#666">Bill To</div>
+      <div>${invoice.customer.name}</div>
+      ${invoice.customer.company ? `<div>${invoice.customer.company}</div>` : ""}
+      ${invoice.customer.address ? `<div>${invoice.customer.address}</div>` : ""}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f5f5f5">
+        <th style="padding:10px;text-align:left">Description</th>
+        <th style="padding:10px;text-align:left">Qty</th>
+        <th style="padding:10px;text-align:left">Unit</th>
+        <th style="padding:10px;text-align:left">Rate</th>
+        <th style="padding:10px;text-align:right">Amount</th>
+      </tr></thead>
+      <tbody>${lines}</tbody>
+    </table>
+    <div style="margin-top:16px;text-align:right;font-size:14px">
+      <div>Subtotal: $${invoice.subtotal.toFixed(2)}</div>
+      <div>GST (${((invoice.taxRate || 0) * 100).toFixed(0)}%): $${invoice.taxAmount.toFixed(2)}</div>
+      <div style="font-size:18px;font-weight:700;margin-top:4px">Total: $${invoice.total.toFixed(2)}</div>
+      <div>Paid: $${paid.toFixed(2)}</div>
+      <div style="font-weight:600">Balance due: $${balance.toFixed(2)}</div>
+    </div>
+    ${invoice.notes ? `<div style="margin-top:24px;font-size:12px;color:#555">${invoice.notes}</div>` : ""}
+    ${org.invoiceFooter ? `<div style="margin-top:16px;font-size:12px;color:#555">${org.invoiceFooter}</div>` : ""}
+  </div>
+</body></html>`;
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
@@ -10,7 +73,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const { id } = await params;
   const body = await req.json();
-  const to = body.to;
+  const to = body.to?.trim();
+  const subject = body.subject?.trim();
   if (!to) return NextResponse.json({ error: "Recipient email is required" }, { status: 400 });
 
   const invoice = await prisma.invoice.findFirst({
@@ -21,93 +85,56 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "Email is not configured. Add RESEND_API_KEY to environment variables." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Email is not configured. Add RESEND_API_KEY in Vercel environment variables, then redeploy." },
+      { status: 400 }
+    );
   }
 
   const paid = invoice.payments.reduce((s, p) => s + p.amount, 0);
   const balance = Math.max(0, invoice.total - paid);
-
-  const linesHtml = invoice.lines
-    .map(
-      (l) =>
-        `<tr>
-          <td style="padding:8px;border-bottom:1px solid #eee">${l.description}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee">${l.quantity}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee">${l.unit}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee">$${l.rate.toFixed(2)}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${l.amount.toFixed(2)}</td>
-        </tr>`
-    )
-    .join("");
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family:system-ui,-apple-system,sans-serif;color:#111;background:#f7f7f7;margin:0;padding:24px">
-  <div style="max-width:640px;margin:0 auto;background:#fff;padding:32px;border-radius:8px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:32px">
-      <div>
-        <div style="font-size:20px;font-weight:700">${invoice.organization.name}</div>
-        ${invoice.organization.phone ? `<div style="font-size:13px;color:#555">${invoice.organization.phone}</div>` : ""}
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:24px;font-weight:700;color:#0d9488">INVOICE</div>
-        <div style="font-size:13px">${invoice.number}</div>
-        <div style="font-size:13px">Issued: ${new Date(invoice.issueDate).toLocaleDateString()}</div>
-        ${invoice.dueDate ? `<div style="font-size:13px">Due: ${new Date(invoice.dueDate).toLocaleDateString()}</div>` : ""}
-      </div>
-    </div>
-
-    <div style="margin-bottom:24px">
-      <div style="font-weight:600;font-size:13px;color:#555">Bill To</div>
-      <div>${invoice.customer.name}</div>
-      ${invoice.customer.company ? `<div>${invoice.customer.company}</div>` : ""}
-      ${invoice.customer.address ? `<div>${invoice.customer.address}</div>` : ""}
-      ${invoice.job ? `<div style="margin-top:8px;font-size:13px">Job: ${invoice.job.title}${invoice.job.location ? " — " + invoice.job.location : ""}</div>` : ""}
-    </div>
-
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead>
-        <tr style="background:#f5f5f5">
-          <th style="padding:8px;text-align:left">Description</th>
-          <th style="padding:8px;text-align:left">Qty</th>
-          <th style="padding:8px;text-align:left">Unit</th>
-          <th style="padding:8px;text-align:left">Rate</th>
-          <th style="padding:8px;text-align:right">Amount</th>
-        </tr>
-      </thead>
-      <tbody>${linesHtml}</tbody>
-    </table>
-
-    <div style="margin-top:16px;text-align:right;font-size:14px">
-      <div>Subtotal: $${invoice.subtotal.toFixed(2)}</div>
-      <div>GST (${((invoice.taxRate || 0) * 100).toFixed(0)}%): $${invoice.taxAmount.toFixed(2)}</div>
-      <div style="font-size:18px;font-weight:700;margin-top:4px">Total: $${invoice.total.toFixed(2)}</div>
-      <div>Paid: $${paid.toFixed(2)}</div>
-      <div style="font-weight:600">Balance: $${balance.toFixed(2)}</div>
-    </div>
-
-    ${invoice.notes ? `<div style="margin-top:24px;font-size:12px;color:#555">${invoice.notes}</div>` : ""}
-  </div>
-</body>
-</html>`;
-
   const fromName = invoice.organization.name;
-  const replyTo = invoice.organization.email || (session?.user as any)?.email;
+  const replyTo = invoice.organization.replyToEmail || invoice.organization.email || (session?.user as any)?.email;
+  const finalSubject = subject || `Invoice ${invoice.number} from ${fromName}`;
+  const html = buildHtml(invoice, paid, balance);
+
+  const record = await prisma.invoiceEmail.create({
+    data: {
+      organizationId: orgId,
+      invoiceId: invoice.id,
+      to,
+      subject: finalSubject,
+      status: "Queued",
+      userId: (session?.user as any)?.id,
+    },
+  });
 
   const resend = new Resend(apiKey);
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: `${fromName} <${process.env.RESEND_FROM || "onboarding@resend.dev"}>`,
       to,
       replyTo: replyTo || undefined,
-      subject: `Invoice ${invoice.number} from ${fromName}`,
+      subject: finalSubject,
       html,
     });
-    return NextResponse.json({ ok: true });
+    if (result.error) {
+      await prisma.invoiceEmail.update({
+        where: { id: record.id },
+        data: { status: "Failed", error: result.error.message },
+      });
+      return NextResponse.json({ error: result.error.message }, { status: 500 });
+    }
+    await prisma.invoiceEmail.update({
+      where: { id: record.id },
+      data: { status: "Sent", providerId: result.data?.id },
+    });
+    return NextResponse.json({ ok: true, status: "Sent", id: result.data?.id });
   } catch (e: any) {
-    console.error(e);
-    return NextResponse.json({ error: e.message || "Failed to send email" }, { status: 500 });
+    await prisma.invoiceEmail.update({
+      where: { id: record.id },
+      data: { status: "Failed", error: e.message },
+    });
+    return NextResponse.json({ error: e.message || "Failed to send" }, { status: 500 });
   }
 }
