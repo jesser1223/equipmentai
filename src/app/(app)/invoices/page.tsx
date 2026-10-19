@@ -339,6 +339,22 @@ export default function InvoicesPage() {
                     >
                       Print
                     </a>
+                    <button
+                      onClick={async () => {
+                        const to = prompt("Send invoice to email:");
+                        if (!to) return;
+                        const res = await fetch(`/api/invoices/${inv.id}/email`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ to }),
+                        });
+                        const data = await res.json();
+                        alert(res.ok ? "Email sent" : data.error || "Failed to send");
+                      }}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      Email
+                    </button>
                     {inv.status !== "Paid" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
