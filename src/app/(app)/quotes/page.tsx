@@ -102,9 +102,8 @@ export default function QuotesPage() {
         title="Delete quote?"
         description={`Permanently delete quote ${toDelete?.number}? This cannot be undone.`}
         confirmLabel="Delete Quote"
-        danger
         loading={deleting}
-        onCancel={() => setToDelete(null)}
+        onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return;
           setDeleting(true);
