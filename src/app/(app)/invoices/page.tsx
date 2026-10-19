@@ -332,6 +332,13 @@ export default function InvoicesPage() {
                   <td className="px-4 py-3">${inv.amountPaid.toFixed(2)}</td>
                   <td className="px-4 py-3">{inv.status}</td>
                   <td className="px-4 py-3 text-right space-x-3">
+                    <a
+                      href={`/invoices/${inv.id}/print`}
+                      target="_blank"
+                      className="text-xs text-accent hover:underline"
+                    >
+                      Print
+                    </a>
                     {inv.status !== "Paid" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
