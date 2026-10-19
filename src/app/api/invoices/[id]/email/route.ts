@@ -93,12 +93,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 </body>
 </html>`;
 
+  const fromName = invoice.organization.name;
+  const replyTo = invoice.organization.email || (session?.user as any)?.email;
+
   const resend = new Resend(apiKey);
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM || "invoices@equipmentai.app",
+      from: `${fromName} <${process.env.RESEND_FROM || "onboarding@resend.dev"}>`,
       to,
-      subject: `Invoice ${invoice.number} from ${invoice.organization.name}`,
+      reply_to: replyTo || undefined,
+      subject: `Invoice ${invoice.number} from ${fromName}`,
       html,
     });
     return NextResponse.json({ ok: true });
