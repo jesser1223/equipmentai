@@ -135,11 +135,23 @@ export default function InvoicesPage() {
           ))}
         </select>
         <button
-          onClick={generateFromJob}
-          disabled={!genJobId || generating}
+          onClick={() => {
+            if (!genJobId) return;
+            const job = jobs.find((j) => j.id === genJobId);
+            if (job) {
+              setForm({
+                ...form,
+                customerId: job.customerId || "",
+                description: job.title || "",
+              });
+              setWizardStep(1);
+            }
+            setShowForm(true);
+          }}
+          disabled={!genJobId}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50"
         >
-          {generating ? "Generating…" : "Generate Invoice"}
+          Generate Invoice
         </button>
       </div>
 
