@@ -23,7 +23,9 @@ export default function InvoicesPage() {
   const [payAmount, setPayAmount] = useState("");
   const [paying, setPaying] = useState(false);
   const [genJobId, setGenJobId] = useState("");
-  const [generating, setGenerating] = useState(false);
+  const [emailTarget, setEmailTarget] = useState<any>(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailing, setEmailing] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -340,17 +342,7 @@ export default function InvoicesPage() {
                       Print
                     </a>
                     <button
-                      onClick={async () => {
-                        const to = prompt("Send invoice to email:");
-                        if (!to) return;
-                        const res = await fetch(`/api/invoices/${inv.id}/email`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ to }),
-                        });
-                        const data = await res.json();
-                        alert(res.ok ? "Email sent" : data.error || "Failed to send");
-                      }}
+                      onClick={() => { setEmailTarget(inv); setEmailTo(inv.customer?.email || ""); }}
                       className="text-xs text-accent hover:underline"
                     >
                       Email
@@ -392,6 +384,46 @@ export default function InvoicesPage() {
             <button onClick={() => setPayTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
             <button onClick={pay} disabled={paying || !payAmount} className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
               {paying ? "Saving…" : "Record"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={!!emailTarget} onClose={() => !emailing && setEmailTarget(null)} title="Email invoice">
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Send invoice {emailTarget?.number} to:
+          </p>
+          <input
+            type="email"
+            value={emailTo}
+            onChange={(e) => setEmailTo(e.target.value)}
+            placeholder="customer@example.com"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setEmailTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
+            <button
+              onClick={async () => {
+                if (!emailTo) return;
+                setEmailing(true);
+                const res = await fetch(`/api/invoices/${emailTarget.id}/email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ to: emailTo }),
+                });
+                const data = await res.json();
+                setEmailing(false);
+                if (res.ok) {
+                  setEmailTarget(null);
+                  alert("Invoice emailed");
+                } else {
+                  alert(data.error || "Failed to send");
+                }
+              }}
+              disabled={emailing || !emailTo}
+              className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50"
+            >
+              {emailing ? "Sending…" : "Send"}
             </button>
           </div>
         </div>
