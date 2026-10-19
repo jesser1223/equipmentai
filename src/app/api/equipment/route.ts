@@ -9,6 +9,7 @@ export async function GET() {
 
   const equipment = await prisma.equipment.findMany({
     where: { organizationId: orgId },
+    include: { attachments: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(equipment);
@@ -48,7 +49,30 @@ export async function POST(req: Request) {
         organizationId: orgId,
       },
     });
-    return NextResponse.json(equipment, { status: 201 });
+
+    if (Array.isArray(body.attachments)) {
+      await prisma.attachment.createMany({
+        data: body.attachments
+          .filter((a: any) => a.name)
+          .map((a: any) => ({
+            name: a.name,
+            manufacturer: a.manufacturer || null,
+            model: a.model || null,
+            serialNumber: a.serialNumber || null,
+            billingMethod: a.billingMethod || "hourly",
+            rate: Number(a.rate) || 0,
+            notes: a.notes || null,
+            equipmentId: equipment.id,
+            organizationId: orgId,
+          })),
+      });
+    }
+
+    const full = await prisma.equipment.findUnique({
+      where: { id: equipment.id },
+      include: { attachments: true },
+    });
+    return NextResponse.json(full, { status: 201 });
   } catch (e: any) {
     console.error(e);
     return NextResponse.json({ error: "Failed to create equipment. Check that the unit number is unique." }, { status: 400 });

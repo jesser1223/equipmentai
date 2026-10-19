@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { EquipmentForm } from "@/components/equipment-form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -29,6 +29,7 @@ export default function EquipmentPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [toast, setToast] = useState("");
 
   const [toDelete, setToDelete] = useState<Equipment | null>(null);
@@ -60,8 +61,10 @@ export default function EquipmentPage() {
   );
 
   const handleSave = async (data: any) => {
-    const res = await fetch("/api/equipment", {
-      method: "POST",
+    const url = editing ? `/api/equipment/${editing.id}` : "/api/equipment";
+    const method = editing ? "PATCH" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
@@ -70,7 +73,8 @@ export default function EquipmentPage() {
       throw new Error(err.error || "Save failed");
     }
     setModalOpen(false);
-    setToast("Equipment saved");
+    setEditing(null);
+    setToast(editing ? "Equipment updated" : "Equipment saved");
     setTimeout(() => setToast(""), 2500);
     load();
   };
@@ -159,7 +163,17 @@ export default function EquipmentPage() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     ${eq.hourlyRate}/hr · ${eq.dailyRate}/day
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button
+                      onClick={() => {
+                        setEditing(eq);
+                        setModalOpen(true);
+                      }}
+                      className="text-muted-foreground hover:text-accent"
+                      aria-label={`Edit ${eq.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => {
                         setDeleteError(null);
@@ -178,8 +192,29 @@ export default function EquipmentPage() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Equipment">
-        <EquipmentForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
+      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? "Edit Equipment" : "Add Equipment"}>
+        <EquipmentForm
+          initial={editing ? {
+            ...editing,
+            year: editing.year?.toString() || "",
+            hourlyRate: editing.hourlyRate?.toString() || "",
+            dailyRate: editing.dailyRate?.toString() || "",
+            hourMeter: editing.hourMeter?.toString() || "",
+            latitude: editing.latitude?.toString() || "",
+            longitude: editing.longitude?.toString() || "",
+            attachments: (editing.attachments || []).map((a: any) => ({
+              name: a.name,
+              manufacturer: a.manufacturer || "",
+              model: a.model || "",
+              serialNumber: a.serialNumber || "",
+              billingMethod: a.billingMethod || "hourly",
+              rate: a.rate?.toString() || "0",
+              notes: a.notes || "",
+            })),
+          } : undefined}
+          onSave={handleSave}
+          onCancel={() => { setModalOpen(false); setEditing(null); }}
+        />
       </Modal>
 
       <ConfirmDialog
