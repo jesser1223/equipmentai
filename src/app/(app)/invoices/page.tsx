@@ -28,6 +28,7 @@ export default function InvoicesPage() {
   const [emailTo, setEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailing, setEmailing] = useState(false);
+  const [emailSuccess, setEmailSuccess] = useState(false);
 
   const load = async () => {
     setLoading(true);
