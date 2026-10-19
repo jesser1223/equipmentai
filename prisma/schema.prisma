@@ -35,6 +35,7 @@ model Organization {
   quotes         Quote[]
   jobs           Job[]
   invoices       Invoice[]
+  supplies       Supply[]
   auditLogs      AuditLog[]
 }
 
@@ -223,6 +224,25 @@ model Invoice {
   payments    Payment[]
 
   @@unique([organizationId, number])
+}
+
+model Supply {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  category        String?
+  unit            String   @default("each")
+  costPrice       Float    @default(0)
+  markupPercent   Float    @default(10)
+  customerPrice   Float    @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model InvoiceLine {
