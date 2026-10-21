@@ -39,6 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             organizationId: user.organizationId,
             organizationName: user.organization.name,
             organizationStatus: user.organization.status,
+            tokenVersion: user.tokenVersion,
           };
         } catch (err: any) {
           console.error("[auth] database error:", err.message);
@@ -57,6 +58,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationId = (user as any).organizationId;
         token.organizationName = (user as any).organizationName;
         token.organizationStatus = (user as any).organizationStatus;
+        token.tokenVersion = (user as any).tokenVersion || 0;
+      }
+      if (token.sub) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { tokenVersion: true },
+        });
+        if (!current || current.tokenVersion !== (token.tokenVersion || 0)) {
+          return null as any;
+        }
       }
       // Always recompute owner flag (user is only present on initial sign-in)
       const ownerId = process.env.OWNER_USER_ID?.trim();

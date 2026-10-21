@@ -1,7 +1,7 @@
 import { auth } from "@/auth.config";
 import { NextResponse } from "next/server";
 
-const PUBLIC = ["/login", "/signup", "/forgot-password", "/pending", "/denied"];
+const PUBLIC = ["/login", "/signup", "/forgot-password", "/reset-password", "/pending", "/denied"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
