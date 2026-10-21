@@ -1,7 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { isConfiguredOwner } from "@/lib/owner";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -58,12 +59,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationStatus = (user as any).organizationStatus;
       }
       // Always recompute owner flag (user is only present on initial sign-in)
-      const ownerId = process.env.OWNER_USER_ID;
-      const email = ((user as any)?.email || (token as any).email || "").toLowerCase();
-      const ownerEmails = ["admin@equipmentai.com", "jessereinink260@gmail.com"];
-      token.isOwner = ownerId
-        ? token.sub === ownerId || (user as any)?.id === ownerId || ownerEmails.includes(email)
-        : ownerEmails.includes(email);
+      const ownerId = process.env.OWNER_USER_ID?.trim();
+      if (!ownerId) {
+        console.error("[auth] OWNER_USER_ID is not set. Admin access is disabled.");
+      }
+      token.isOwner = isConfiguredOwner(token.sub || (user as any)?.id);
       return token;
     },
     async session({ session, token }) {
