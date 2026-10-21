@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { buildInvoicePdf } from "@/lib/invoice-pdf";
 
 function buildHtml(invoice: any, paid: number, balance: number) {
   const lines = invoice.lines
@@ -84,9 +85,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!invoice) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const fromAddress = process.env.RESEND_FROM?.trim();
+  if (!apiKey || !fromAddress) {
     return NextResponse.json(
-      { error: "Email is not configured. Add RESEND_API_KEY in Vercel environment variables, then redeploy." },
+      {
+        error:
+          "Email is not configured. Set RESEND_API_KEY and RESEND_FROM (an address on your verified domain) in Vercel, then redeploy.",
+      },
+      { status: 400 }
+    );
+  }
+  if (fromAddress.endsWith("@resend.dev")) {
+    return NextResponse.json(
+      {
+        error:
+          "RESEND_FROM is still a Resend testing address. Verify your domain at resend.com/domains and set RESEND_FROM to an address on that domain (for example invoices@yourdomain.com).",
+      },
       { status: 400 }
     );
   }
@@ -97,6 +111,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const replyTo = invoice.organization.replyToEmail || invoice.organization.email || (session?.user as any)?.email;
   const finalSubject = subject || `Invoice ${invoice.number} from ${fromName}`;
   const html = buildHtml(invoice, paid, balance);
+  const pdf = await buildInvoicePdf(invoice);
 
   const record = await prisma.invoiceEmail.create({
     data: {
@@ -112,11 +127,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const resend = new Resend(apiKey);
   try {
     const result = await resend.emails.send({
-      from: `${fromName} <${process.env.RESEND_FROM || "onboarding@resend.dev"}>`,
+      from: `${fromName} <${fromAddress}>`,
       to,
       replyTo: replyTo || undefined,
       subject: finalSubject,
       html,
+      attachments: [
+        {
+          filename: `${invoice.number}.pdf`,
+          content: Buffer.from(pdf),
+        },
+      ],
     });
     if (result.error) {
       await prisma.invoiceEmail.update({

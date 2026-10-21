@@ -29,66 +29,88 @@ export default function InvoicesPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailing, setEmailing] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [taxRate, setTaxRate] = useState(0.05);
+  const [formError, setFormError] = useState("");
 
   const load = async () => {
     setLoading(true);
-    const [inv, cust, jobRes, eqRes] = await Promise.all([
+    const [inv, cust, jobRes, eqRes, settingsRes] = await Promise.all([
       fetch("/api/invoices").then((r) => r.json()),
       fetch("/api/customers").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
       fetch("/api/equipment").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()),
     ]);
     setInvoices(Array.isArray(inv) ? inv : []);
     setCustomers(Array.isArray(cust) ? cust : []);
     setJobs(Array.isArray(jobRes) ? jobRes : []);
     setEquipmentList(Array.isArray(eqRes) ? eqRes : []);
+    if (settingsRes?.taxRate != null) setTaxRate(Number(settingsRes.taxRate));
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const generateFromJob = async () => {
-    if (!genJobId) return;
-    const job = jobs.find((j) => j.id === genJobId);
-    if (!job) return;
-    setGenerating(true);
-    const rate = job.equipment?.hourlyRate || 0;
-    const hours = 8;
-    await fetch("/api/invoices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customerId: job.customerId,
-        jobId: job.id,
-        notes: `Generated from job: ${job.title}`,
-        lines: [
-          {
-            description: `${job.equipment?.name || "Equipment"} – ${job.title}`,
-            quantity: hours,
-            unit: "hours",
-            rate,
-          },
-        ],
-      }),
-    });
-    setGenerating(false);
-    setGenJobId("");
-    load();
+  const previewSubtotal = () => {
+    const eq = equipmentList.find((e: any) => e.id === selectedEquipment[0]);
+    const machine = (equipmentHours[selectedEquipment[0]] || 0) * (eq?.hourlyRate || 0);
+    const atts = Object.entries(selectedAttachments).reduce((s, [id, hrs]) => {
+      const att = eq?.attachments?.find((a: any) => a.id === id);
+      return s + (hrs || 0) * (att?.rate || 0);
+    }, 0);
+    return machine + atts + (Number(form.rate) || 0);
   };
 
-  const create = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetch("/api/invoices", {
+  const create = async () => {
+    setFormError("");
+    if (!form.customerId) {
+      setFormError("Select a customer.");
+      return;
+    }
+    const eq = equipmentList.find((e: any) => e.id === selectedEquipment[0]);
+    const hours = equipmentHours[selectedEquipment[0]] || 0;
+    if (selectedEquipment[0] && (!hours || hours <= 0)) {
+      setFormError("Enter machine hours greater than zero.");
+      return;
+    }
+    if (!selectedEquipment[0] && !(Number(form.rate) > 0)) {
+      setFormError("Add equipment hours or other charges.");
+      return;
+    }
+
+    const attachments = Object.entries(selectedAttachments)
+      .filter(([, hrs]) => hrs && hrs > 0)
+      .map(([id, hrs]) => ({ id, hours: hrs }));
+
+    const otherCharges = Number(form.rate) > 0
+      ? [{ description: "Fuel, supplies and other charges", amount: Number(form.rate) }]
+      : [];
+
+    const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customerId: form.customerId,
         dueDate: form.dueDate || null,
-        notes: form.notes,
-        lines: [{ description: form.description, quantity: Number(form.quantity), rate: Number(form.rate) }],
+        notes: form.notes || form.description || null,
+        jobId: genJobId || null,
+        equipment: selectedEquipment[0] ? { id: selectedEquipment[0], hours } : null,
+        attachments,
+        otherCharges,
       }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setFormError(data.error || "Could not create invoice.");
+      return;
+    }
     setShowForm(false);
+    setWizardStep(1);
+    setSelectedEquipment([]);
+    setEquipmentHours({});
+    setSelectedAttachments({});
+    setForm({ customerId: "", dueDate: "", notes: "", description: "", quantity: 1, rate: 0 });
+    setGenJobId("");
     load();
   };
 
@@ -115,7 +137,9 @@ export default function InvoicesPage() {
     load();
   };
 
-  const outstanding = invoices.reduce((s, i) => s + Math.max(0, i.total - i.amountPaid), 0);
+  const outstanding = invoices
+    .filter((i) => i.status !== "Void" && i.status !== "Paid")
+    .reduce((s, i) => s + Math.max(0, i.total - i.amountPaid), 0);
 
   return (
     <div className="space-y-6">
@@ -149,7 +173,12 @@ export default function InvoicesPage() {
                 customerId: job.customerId || "",
                 description: job.title || "",
               });
+              if (job.equipmentId) {
+                setSelectedEquipment([job.equipmentId]);
+                setEquipmentHours({});
+              }
               setWizardStep(1);
+              setFormError("Enter the actual machine hours for this job before generating the invoice.");
             }
             setShowForm(true);
           }}
@@ -261,19 +290,13 @@ export default function InvoicesPage() {
               </div>
 
               <div className="rounded-lg bg-emerald-500/10 p-3">
-                <div className="text-xs text-muted-foreground">Illustrative equipment and attachment subtotal</div>
+                <div className="text-xs text-muted-foreground">Subtotal before GST</div>
                 <div className="text-xl font-semibold text-emerald-400">
-                  ${(() => {
-                    const eq = equipmentList.find((e: any) => e.id === selectedEquipment[0]);
-                    const machine = (equipmentHours[selectedEquipment[0]] || 0) * (eq?.hourlyRate || 0);
-                    const atts = Object.entries(selectedAttachments).reduce((s, [id, hrs]) => {
-                      const att = eq?.attachments?.find((a: any) => a.id === id);
-                      return s + (hrs || 0) * (att?.rate || 0);
-                    }, 0);
-                    return (machine + atts + (form.rate || 0)).toFixed(2);
-                  })()}
+                  ${previewSubtotal().toFixed(2)}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Example rates only, before GST. This preview does not create or save an invoice.</div>
+                <div className="text-[11px] text-muted-foreground">
+                  GST at {(taxRate * 100).toFixed(1)}% will be added on save. Rates come from the selected equipment and attachments.
+                </div>
               </div>
             </div>
           )}
@@ -284,15 +307,10 @@ export default function InvoicesPage() {
               <p className="text-sm">Customer: {customers.find((c) => c.id === form.customerId)?.name || "—"}</p>
               <p className="text-sm">Machine: {equipmentList.find((e: any) => e.id === selectedEquipment[0])?.name || "—"}</p>
               <p className="text-sm">Hours: {equipmentHours[selectedEquipment[0]] || 0}</p>
-              <p className="font-medium">Subtotal: ${(() => {
-                const eq = equipmentList.find((e: any) => e.id === selectedEquipment[0]);
-                const machine = (equipmentHours[selectedEquipment[0]] || 0) * (eq?.hourlyRate || 0);
-                const atts = Object.entries(selectedAttachments).reduce((s, [id, hrs]) => {
-                  const att = eq?.attachments?.find((a: any) => a.id === id);
-                  return s + (hrs || 0) * (att?.rate || 0);
-                }, 0);
-                return (machine + atts + (form.rate || 0)).toFixed(2);
-              })()}</p>
+              <p className="font-medium">Subtotal: ${previewSubtotal().toFixed(2)}</p>
+              <p className="font-medium">GST ({(taxRate * 100).toFixed(1)}%): ${(previewSubtotal() * taxRate).toFixed(2)}</p>
+              <p className="font-semibold">Total: ${(previewSubtotal() * (1 + taxRate)).toFixed(2)}</p>
+              {formError && <p className="text-sm text-red-400">{formError}</p>}
             </div>
           )}
 
@@ -344,11 +362,18 @@ export default function InvoicesPage() {
                     >
                       Print
                     </a>
+                    <a
+                      href={`/api/invoices/${inv.id}/pdf`}
+                      className="text-xs text-accent hover:underline"
+                    >
+                      Download PDF
+                    </a>
                     <button
                       onClick={() => {
                         setEmailTarget(inv);
                         setEmailTo(inv.customer?.email || "");
                         setEmailSubject(`Invoice ${inv.number} from ${inv.organization?.name || "EquipmentAI"}`);
+                        setEmailError("");
                       }}
                       className="text-xs text-accent hover:underline"
                     >
@@ -413,25 +438,36 @@ export default function InvoicesPage() {
             placeholder="Subject"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
+          {emailError && (
+            <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {emailError}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <button onClick={() => setEmailTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
             <button
               onClick={async () => {
                 if (!emailTo) return;
                 setEmailing(true);
-                const res = await fetch(`/api/invoices/${emailTarget.id}/email`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ to: emailTo, subject: emailSubject }),
-                });
-                const data = await res.json();
-                setEmailing(false);
-                if (res.ok) {
-                  setEmailTarget(null);
-                  setEmailSuccess(true);
-                  setTimeout(() => setEmailSuccess(false), 3000);
-                } else {
-                  alert(data.error || "Failed to send");
+                setEmailError("");
+                try {
+                  const res = await fetch(`/api/invoices/${emailTarget.id}/email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ to: emailTo, subject: emailSubject }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setEmailTarget(null);
+                    setEmailSuccess(true);
+                    setTimeout(() => setEmailSuccess(false), 3000);
+                  } else {
+                    setEmailError(data.error || "Failed to send");
+                  }
+                } catch {
+                  setEmailError("Failed to send. Check your connection and try again.");
+                } finally {
+                  setEmailing(false);
                 }
               }}
               disabled={emailing || !emailTo}
