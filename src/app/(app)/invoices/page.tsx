@@ -29,6 +29,7 @@ export default function InvoicesPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailing, setEmailing] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [emailError, setEmailError] = useState("");
   const [taxRate, setTaxRate] = useState(0.05);
   const [formError, setFormError] = useState("");
 
