@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Add at least one line." }, { status: 400 });
   }
 
-  let lines;
+  let lines: { description: string; quantity: number; unit: string; rate: number; amount: number; equipmentId: string | null }[];
   try {
     lines = incoming.map((line: any) => {
       const quantity = Number(line.quantity) || 0;
@@ -49,7 +49,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: err.message || "Invalid line items." }, { status: 400 });
   }
 
-  const subtotal = Math.round(lines.reduce((sum, line) => sum + line.amount, 0) * 100) / 100;
+  const subtotal = Math.round(lines.reduce((sum: number, line: { amount: number }) => sum + line.amount, 0) * 100) / 100;
   const taxRate = Number(body.taxRate) || 0;
   const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;

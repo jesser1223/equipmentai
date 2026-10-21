@@ -61,12 +61,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.tokenVersion = (user as any).tokenVersion || 0;
       }
       if (token.sub) {
-        const current = await prisma.user.findUnique({
-          where: { id: token.sub },
-          select: { tokenVersion: true },
-        });
-        if (!current || current.tokenVersion !== (token.tokenVersion || 0)) {
-          return null as any;
+        try {
+          const current = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { tokenVersion: true },
+          });
+          if (!current || current.tokenVersion !== (token.tokenVersion || 0)) {
+            return { invalid: true } as any;
+          }
+        } catch (err: any) {
+          console.error("[auth] tokenVersion check skipped:", err.message);
         }
       }
       // Always recompute owner flag (user is only present on initial sign-in)
@@ -78,6 +82,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      if ((token as any).invalid) {
+        return { ...session, user: undefined } as any;
+      }
       if (session.user) {
         (session.user as any).id = token.sub;
         (session.user as any).organizationId = token.organizationId;
