@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Add at least one line." }, { status: 400 });
   }
 
-  let lines;
+  let lines: { description: string; quantity: number; unit: string; rate: number; amount: number }[];
   try {
     lines = incoming.map((line: any) => {
       const quantity = Number(line.quantity);
