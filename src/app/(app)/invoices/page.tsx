@@ -32,6 +32,12 @@ export default function InvoicesPage() {
   const [emailError, setEmailError] = useState("");
   const [taxRate, setTaxRate] = useState(0.05);
   const [formError, setFormError] = useState("");
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editLines, setEditLines] = useState<any[]>([]);
+  const [editNotes, setEditNotes] = useState("");
+  const [editDue, setEditDue] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -380,7 +386,21 @@ export default function InvoicesPage() {
                     >
                       Email
                     </button>
-                    {inv.status !== "Paid" && (
+                    {inv.status !== "Void" && (
+                      <button
+                        onClick={() => {
+                          setEditTarget(inv);
+                          setEditLines((inv.lines || []).map((l: any) => ({ ...l })));
+                          setEditNotes(inv.notes || "");
+                          setEditDue(inv.dueDate ? String(inv.dueDate).slice(0, 10) : "");
+                          setEditError("");
+                        }}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {inv.status !== "Paid" && inv.status !== "Void" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
                     <button onClick={() => setToDelete(inv)} className="text-danger"><Trash2 className="inline h-4 w-4" /></button>
@@ -401,6 +421,101 @@ export default function InvoicesPage() {
         loading={deleting}
       />
 
+      <Modal open={!!editTarget} onClose={() => !savingEdit && setEditTarget(null)} title={`Edit ${editTarget?.number || "invoice"}`}>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Due date</label>
+            <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Notes</label>
+            <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
+          </div>
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">Line items</div>
+            {editLines.map((line, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-2">
+                <input
+                  value={line.description || ""}
+                  onChange={(e) => {
+                    const next = [...editLines];
+                    next[idx] = { ...next[idx], description: e.target.value };
+                    setEditLines(next);
+                  }}
+                  className="col-span-6 rounded-lg border border-border bg-background px-2 py-2 text-sm"
+                  placeholder="Description"
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  value={line.quantity}
+                  onChange={(e) => {
+                    const next = [...editLines];
+                    next[idx] = { ...next[idx], quantity: Number(e.target.value) };
+                    setEditLines(next);
+                  }}
+                  className="col-span-2 rounded-lg border border-border bg-background px-2 py-2 text-sm"
+                  placeholder="Qty"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  value={line.rate}
+                  onChange={(e) => {
+                    const next = [...editLines];
+                    next[idx] = { ...next[idx], rate: Number(e.target.value) };
+                    setEditLines(next);
+                  }}
+                  className="col-span-3 rounded-lg border border-border bg-background px-2 py-2 text-sm"
+                  placeholder="Rate"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))}
+                  className="col-span-1 text-danger"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setEditLines([...editLines, { description: "", quantity: 1, rate: 0, unit: "each" }])}
+              className="text-xs text-accent"
+            >
+              + Add line
+            </button>
+          </div>
+          {editError && <p className="text-sm text-red-400">{editError}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setEditTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
+            <button
+              disabled={savingEdit}
+              onClick={async () => {
+                if (!editTarget) return;
+                setSavingEdit(true);
+                setEditError("");
+                const res = await fetch(`/api/invoices/${editTarget.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ notes: editNotes, dueDate: editDue || null, lines: editLines }),
+                });
+                setSavingEdit(false);
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  setEditError(data.error || "Could not save invoice.");
+                  return;
+                }
+                setEditTarget(null);
+                load();
+              }}
+              className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50"
+            >
+              {savingEdit ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={!!payTarget} onClose={() => !paying && setPayTarget(null)} title="Record payment">
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">Invoice {payTarget?.number} · Balance ${(payTarget ? payTarget.total - payTarget.amountPaid : 0).toFixed(2)}</p>
