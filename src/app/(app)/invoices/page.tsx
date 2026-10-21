@@ -486,6 +486,22 @@ export default function InvoicesPage() {
               + Add line
             </button>
           </div>
+          {(() => {
+            const subtotal = editLines.reduce((sum, line) => {
+              const qty = Number(line.quantity) || 0;
+              const rate = Number(line.rate) || 0;
+              return sum + qty * rate;
+            }, 0);
+            const gst = subtotal * taxRate;
+            const total = subtotal + gst;
+            return (
+              <div className="rounded-lg bg-emerald-500/10 p-3 text-sm">
+                <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                <div className="mt-1 flex justify-between text-muted-foreground"><span>GST ({(taxRate * 100).toFixed(1)}%)</span><span>${gst.toFixed(2)}</span></div>
+                <div className="mt-2 flex justify-between font-semibold"><span>New total</span><span>${total.toFixed(2)}</span></div>
+              </div>
+            );
+          })()}
           {editError && <p className="text-sm text-red-400">{editError}</p>}
           <div className="flex justify-end gap-2">
             <button onClick={() => setEditTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
