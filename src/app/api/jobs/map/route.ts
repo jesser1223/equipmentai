@@ -1,19 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { geocodeAddress } from "@/lib/geocode";
 
+export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function GET() {
-  try {
-    const session = await auth();
-    const orgId = (session?.user as any)?.organizationId;
-    const blocked = blockedOrganizationResponse(session);
-    if (blocked) return blocked;
-    if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  await connection();
+  const session = await auth();
+  const orgId = (session?.user as any)?.organizationId;
+  const blocked = blockedOrganizationResponse(session);
+  if (blocked) return blocked;
+  if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  try {
     const jobs = await prisma.job.findMany({
       where: { organizationId: orgId, location: { not: null } },
       include: { customer: true },
