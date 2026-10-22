@@ -38,16 +38,17 @@ export function MapPreview() {
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Finding job addresses…</div>
       ) : error ? (
         <div className="flex h-full items-center justify-center px-6 text-center text-sm text-danger">{error}</div>
-      ) : markers.length === 0 ? (
-        <div className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">
-          No job addresses yet. Add a job-site address when scheduling a job.
-        </div>
       ) : (
         <MapInner locations={markers} />
       )}
       {unresolved.length > 0 && (
-        <div className="absolute left-3 top-3 z-10 max-w-xs rounded-md bg-black/70 px-2 py-1 text-[10px] text-white/80 backdrop-blur-sm">
-          Could not locate {unresolved.length} address{unresolved.length === 1 ? "" : "es"}.
+        <div className="absolute left-3 top-3 z-10 max-w-sm rounded-md bg-black/75 px-3 py-2 text-[11px] text-white/90 backdrop-blur-sm">
+          Could not locate: {unresolved.join("; ")}. Use a full street address with city.
+        </div>
+      )}
+      {!loading && markers.length === 0 && unresolved.length === 0 && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-white/80">
+          No job addresses yet. Add a job-site address when scheduling a job.
         </div>
       )}
       <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-md bg-black/70 px-2 py-1 text-[10px] text-white/80 backdrop-blur-sm">

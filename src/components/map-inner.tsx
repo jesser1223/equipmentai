@@ -39,7 +39,7 @@ export default function MapInner({
 }) {
   const first = locations[0];
   return (
-    <MapView center={first ? [first.lat, first.lng] : [49.28, -123.12]} zoom={first ? 12 : 4} style={{ height: "100%", width: "100%" }}>
+    <MapView center={first ? [first.lat, first.lng] : [49.2827, -123.1207]} zoom={first ? 12 : 11} style={{ height: "100%", width: "100%" }}>
       <MapTiles
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
