@@ -283,7 +283,7 @@ function QuoteForm({
               placeholder="Rate"
             />
             <div className="col-span-3 text-sm">${line.amount.toFixed(2)}</div>
-            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-danger">
+            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-muted-foreground hover:text-danger">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>

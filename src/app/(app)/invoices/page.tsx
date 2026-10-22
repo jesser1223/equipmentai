@@ -403,7 +403,7 @@ export default function InvoicesPage() {
                     {inv.status !== "Paid" && inv.status !== "Void" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
-                    <button onClick={() => setToDelete(inv)} className="text-danger"><Trash2 className="inline h-4 w-4" /></button>
+                    <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -472,7 +472,7 @@ export default function InvoicesPage() {
                 <button
                   type="button"
                   onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))}
-                  className="col-span-1 text-danger"
+                  className="col-span-1 text-muted-foreground hover:text-danger"
                 >
                   ×
                 </button>

@@ -180,7 +180,7 @@ export default function EquipmentPage() {
                           setDeleteError(null);
                           setToDelete(eq);
                         }}
-                        className="text-danger hover:opacity-80"
+                        className="text-muted-foreground hover:text-danger"
                         aria-label={`Delete ${eq.name}`}
                       >
                         <Trash2 className="h-4 w-4" />

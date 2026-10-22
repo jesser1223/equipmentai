@@ -145,7 +145,7 @@ export default function SuppliesPage() {
                       <button onClick={() => openEdit(s)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
                         <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                       </button>
-                      {s.active && <button onClick={() => deactivate(s)} className="text-danger hover:opacity-80"><Trash2 className="h-4 w-4" /></button>}
+                      {s.active && <button onClick={() => deactivate(s)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${s.name}`}><Trash2 className="h-4 w-4" /></button>}
                     </div>
                   </td>
                 </tr>
