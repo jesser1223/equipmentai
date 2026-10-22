@@ -22,30 +22,15 @@ export default function CustomersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const [saving, setSaving] = useState(false);
-
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    if (!name.trim()) {
-      setError("Enter a customer name.");
-      return;
-    }
-    setSaving(true);
-    const res = await fetch("/api/customers", {
+    if (!name.trim()) return;
+    await fetch("/api/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
+      body: JSON.stringify({ name }),
     });
-    const data = await res.json().catch(() => ({}));
-    setSaving(false);
-    if (!res.ok) {
-      setError(data.error || "Could not add customer.");
-      return;
-    }
     setName("");
-    setToast("Customer added");
-    setTimeout(() => setToast(""), 2500);
     load();
   };
 
@@ -66,35 +51,19 @@ export default function CustomersPage() {
     load();
   };
 
-  const linked = toDelete?._count || { quotes: 0, jobs: 0, invoices: 0 };
-  const attached = [
-    linked.quotes ? `${linked.quotes} quote${linked.quotes === 1 ? "" : "s"}` : "",
-    linked.jobs ? `${linked.jobs} job${linked.jobs === 1 ? "" : "s"}` : "",
-    linked.invoices ? `${linked.invoices} invoice${linked.invoices === 1 ? "" : "s"}` : "",
-  ].filter(Boolean);
-  const description = !toDelete
-    ? ""
-    : attached.length
-      ? `Are you sure you want to delete “${toDelete.name}”? This will also permanently delete the ${attached.join(", ")} attached to this customer. This cannot be undone.`
-      : `Are you sure you want to permanently delete “${toDelete.name}”? This cannot be undone.`;
-
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Customers</h1>
       {toast && <div className="rounded-lg bg-emerald-500/15 px-4 py-2 text-sm text-emerald-400">{toast}</div>}
-      {error && !toDelete && <div className="rounded-lg bg-danger/15 px-4 py-2 text-sm text-danger">{error}</div>}
 
       <form onSubmit={add} className="flex max-w-md gap-2">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Customer name"
-          required
           className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm"
         />
-        <button type="submit" disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50">
-          {saving ? "Adding…" : "Add"}
-        </button>
+        <button className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">Add</button>
       </form>
 
       <div className="rounded-xl border border-border bg-card">
@@ -107,7 +76,7 @@ export default function CustomersPage() {
             {customers.map((c) => (
               <li key={c.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <span>{c.name}</span>
-                <button onClick={() => { setError(""); setToDelete(c); }} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${c.name}`}>
+                <button onClick={() => { setError(""); setToDelete(c); }} className="text-danger hover:opacity-80" aria-label={`Delete ${c.name}`}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>
@@ -121,7 +90,7 @@ export default function CustomersPage() {
         onClose={() => !deleting && setToDelete(null)}
         onConfirm={remove}
         title="Delete customer?"
-        description={description}
+        description={toDelete ? `Permanently delete “${toDelete.name}”? This cannot be undone if the customer has no linked jobs, quotes, or invoices.` : ""}
         confirmLabel="Delete Customer"
         loading={deleting}
         error={error}

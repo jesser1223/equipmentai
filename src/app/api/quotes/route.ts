@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const quotes = await prisma.quote.findMany({
@@ -21,8 +18,6 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
@@ -48,8 +43,8 @@ export async function POST(req: Request) {
         taxRate,
         taxAmount,
         total,
-        organization: { connect: { id: orgId } },
-        customer: { connect: { id: body.customerId } },
+        organizationId: orgId,
+        customerId: body.customerId,
         lines: {
           create: lines.map((l: any) => ({
             description: l.description,

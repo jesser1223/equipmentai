@@ -6,17 +6,11 @@ import Link from "next/link";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    await fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    setLoading(false);
+    // Real email sending requires Resend/Postmark configuration.
+    // For now we show a confirmation without revealing account existence.
     setSent(true);
   };
 
@@ -47,8 +41,8 @@ export default function ForgotPasswordPage() {
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               />
             </div>
-            <button disabled={loading} className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-accent-foreground disabled:opacity-50">
-              {loading ? "Sending…" : "Send reset link"}
+            <button className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-accent-foreground">
+              Send reset link
             </button>
           </form>
         )}

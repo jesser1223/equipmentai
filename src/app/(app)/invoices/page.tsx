@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 
@@ -395,15 +395,15 @@ export default function InvoicesPage() {
                           setEditDue(inv.dueDate ? String(inv.dueDate).slice(0, 10) : "");
                           setEditError("");
                         }}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
+                        className="text-xs text-accent hover:underline"
                       >
-                        <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
+                        Edit
                       </button>
                     )}
                     {inv.status !== "Paid" && inv.status !== "Void" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
-                    <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setToDelete(inv)} className="text-danger"><Trash2 className="inline h-4 w-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -472,7 +472,7 @@ export default function InvoicesPage() {
                 <button
                   type="button"
                   onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))}
-                  className="col-span-1 text-muted-foreground hover:text-danger"
+                  className="col-span-1 text-danger"
                 >
                   ×
                 </button>
@@ -486,22 +486,6 @@ export default function InvoicesPage() {
               + Add line
             </button>
           </div>
-          {(() => {
-            const subtotal = editLines.reduce((sum, line) => {
-              const qty = Number(line.quantity) || 0;
-              const rate = Number(line.rate) || 0;
-              return sum + qty * rate;
-            }, 0);
-            const gst = subtotal * taxRate;
-            const total = subtotal + gst;
-            return (
-              <div className="rounded-lg bg-emerald-500/10 p-3 text-sm">
-                <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="mt-1 flex justify-between text-muted-foreground"><span>GST ({(taxRate * 100).toFixed(1)}%)</span><span>${gst.toFixed(2)}</span></div>
-                <div className="mt-2 flex justify-between font-semibold"><span>New total</span><span>${total.toFixed(2)}</span></div>
-              </div>
-            );
-          })()}
           {editError && <p className="text-sm text-red-400">{editError}</p>}
           <div className="flex justify-end gap-2">
             <button onClick={() => setEditTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>

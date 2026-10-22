@@ -60,22 +60,10 @@ model User {
   name           String
   email          String   @unique
   passwordHash   String
-  tokenVersion   Int      @default(0)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  resetTokens    PasswordResetToken[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-}
-
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
 }
 
 model Equipment {

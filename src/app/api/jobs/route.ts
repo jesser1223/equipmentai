@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const jobs = await prisma.job.findMany({
@@ -21,8 +18,6 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
@@ -45,8 +40,6 @@ export async function POST(req: Request) {
     }
   }
 
-  const location = body.location?.trim() || null;
-
   const job = await prisma.job.create({
     data: {
       title: body.title,
@@ -55,7 +48,7 @@ export async function POST(req: Request) {
       equipmentId: body.equipmentId || null,
       startDate: start,
       endDate: end,
-      location,
+      location: body.location,
       notes: body.notes,
       status: "Scheduled",
     },

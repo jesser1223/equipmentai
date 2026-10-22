@@ -1,13 +1,16 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isConfiguredOwner } from "@/lib/owner";
 
 async function requireOwner() {
   const session = await auth();
   if (!session) return null;
+  const ownerId = process.env.OWNER_USER_ID;
   const userId = (session.user as any)?.id;
-  if (!isConfiguredOwner(userId)) return null;
+  const email = (session.user?.email || "").toLowerCase();
+  const ownerEmails = ["admin@equipmentai.com", "jessereinink260@gmail.com"];
+  const isOwner = (ownerId && userId === ownerId) || ownerEmails.includes(email);
+  if (!isOwner) return null;
   return { session, userId };
 }
 
