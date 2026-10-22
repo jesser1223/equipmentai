@@ -199,7 +199,7 @@ export function EquipmentForm({
             <button
               type="button"
               onClick={() => setForm({ ...form, attachments: form.attachments.filter((_, idx) => idx !== i) })}
-              className="text-xs text-danger"
+              className="text-xs text-muted-foreground hover:text-danger"
             >
               Remove
             </button>

@@ -1,16 +1,37 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
+
+async function requireOwnedEquipment(id: string) {
+  const session = await auth();
+  const orgId = (session?.user as any)?.organizationId;
+  const blocked = blockedOrganizationResponse(session);
+  if (blocked) return { error: blocked };
+  if (!orgId) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+
+  const item = await prisma.equipment.findFirst({
+    where: { id, organizationId: orgId },
+    include: { attachments: true },
+  });
+  if (!item) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+
+  return { orgId, item };
+}
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const item = await prisma.equipment.findUnique({ where: { id } });
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(item);
+  const result = await requireOwnedEquipment(id);
+  if (result.error) return result.error;
+  return NextResponse.json(result.item);
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const result = await requireOwnedEquipment(id);
+    if (result.error) return result.error;
+
     const body = await req.json();
     const { attachments, ...rest } = body;
 
@@ -57,8 +78,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
-    const full = await prisma.equipment.findUnique({
-      where: { id },
+    const full = await prisma.equipment.findFirst({
+      where: { id, organizationId: result.orgId },
       include: { attachments: true },
     });
     return NextResponse.json(full);
@@ -71,6 +92,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const result = await requireOwnedEquipment(id);
+    if (result.error) return result.error;
 
     await prisma.quoteLine.updateMany({
       where: { equipmentId: id },

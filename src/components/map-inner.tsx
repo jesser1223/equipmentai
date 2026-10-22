@@ -5,6 +5,11 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
+const MapView = MapContainer as any;
+const MapTiles = TileLayer as any;
+const MapMarker = Marker as any;
+const MapPopup = Popup as any;
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -14,16 +19,16 @@ L.Icon.Default.mergeOptions({
 
 export default function MapInner({ locations }: { locations: { lat: number; lng: number; label: string }[] }) {
   return (
-    <MapContainer center={[39, -98]} zoom={4} style={{ height: "100%", width: "100%" }}>
-      <TileLayer
+    <MapView center={[39, -98]} zoom={4} style={{ height: "100%", width: "100%" }}>
+      <MapTiles
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {locations.map((loc, i) => (
-        <Marker key={i} position={[loc.lat, loc.lng]}>
-          <Popup>{loc.label}</Popup>
-        </Marker>
+        <MapMarker key={i} position={[loc.lat, loc.lng]}>
+          <MapPopup>{loc.label}</MapPopup>
+        </MapMarker>
       ))}
-    </MapContainer>
+    </MapView>
   );
 }
