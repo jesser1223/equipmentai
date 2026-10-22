@@ -64,10 +64,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const current = await prisma.user.findUnique({
             where: { id: token.sub },
-            select: { tokenVersion: true },
+            select: { tokenVersion: true, organization: { select: { status: true } } },
           });
           if (!current || current.tokenVersion !== (token.tokenVersion || 0)) {
             return { invalid: true } as any;
+          }
+          if (current.organization?.status) {
+            token.organizationStatus = current.organization.status;
           }
         } catch (err: any) {
           console.error("[auth] tokenVersion check skipped:", err.message);

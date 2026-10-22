@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
@@ -70,6 +71,8 @@ function buildHtml(invoice: any, paid: number, balance: number) {
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
+  const blocked = blockedOrganizationResponse(session);
+  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
