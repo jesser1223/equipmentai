@@ -51,7 +51,7 @@ export default function MapInner({
               <strong>{loc.label}</strong>
               {loc.customer && <div>{loc.customer}</div>}
               {loc.address && <div>{loc.address}</div>}
-              {loc.matched && <div>Matched: {loc.matched}</div>}
+              {loc.matched && <div>{loc.approximate ? "Approximate: " : "Matched: "}{loc.matched}</div>}
               {loc.status && <div>{loc.status}</div>}
             </div>
           </MapPopup>
