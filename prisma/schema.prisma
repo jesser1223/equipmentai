@@ -19,10 +19,6 @@ model Organization {
   address        String?
   phone          String?
   email          String?
-  logoUrl        String?
-  gstNumber      String?
-  invoiceFooter  String?
-  replyToEmail   String?
   currency       String   @default("CAD")
   taxRate        Float    @default(0.05)
   invoicePrefix  String   @default("INV")
@@ -39,9 +35,7 @@ model Organization {
   quotes         Quote[]
   jobs           Job[]
   invoices       Invoice[]
-  supplies       Supply[]
   auditLogs      AuditLog[]
-  invoiceEmails  InvoiceEmail[]
 }
 
 model AuditLog {
@@ -227,46 +221,8 @@ model Invoice {
 
   lines       InvoiceLine[]
   payments    Payment[]
-  emails      InvoiceEmail[]
 
   @@unique([organizationId, number])
-}
-
-model InvoiceEmail {
-  id             String   @id @default(cuid())
-  to             String
-  subject        String
-  status         String   @default("Queued") // Queued, Sent, Failed
-  providerId     String?
-  error          String?
-  createdAt      DateTime @default(now())
-
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  invoiceId      String
-  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  userId         String?
-
-  @@index([invoiceId])
-}
-
-model Supply {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  category        String?
-  unit            String   @default("each")
-  costPrice       Float    @default(0)
-  markupPercent   Float    @default(10)
-  customerPrice   Float    @default(0)
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  organizationId  String
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
 }
 
 model InvoiceLine {
