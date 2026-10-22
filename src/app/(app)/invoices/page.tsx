@@ -13,6 +13,7 @@ export default function InvoicesPage() {
   const [wizardStep, setWizardStep] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [equipmentList, setEquipmentList] = useState<any[]>([]);
+  const [supplies, setSupplies] = useState<any[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
   const [equipmentHours, setEquipmentHours] = useState<Record<string, number>>({});
   const [selectedAttachments, setSelectedAttachments] = useState<Record<string, number>>({});
@@ -41,20 +42,32 @@ export default function InvoicesPage() {
 
   const openEdit = (inv: any) => {
     setEditTarget(inv);
-    setEditLines((inv.lines || []).map((line: any) => ({
-      description: line.description || "",
-      quantity: line.quantity,
-      rate: line.rate,
-      unit: line.unit || "hours",
-      equipmentId: "",
-    })));
+    setEditLines((inv.lines || []).map((line: any) => {
+      const description = line.description || "";
+      const supply = supplies.find((item: any) => description.startsWith(item.name));
+      const equipment = equipmentList.find((item: any) => description.startsWith(item.name));
+      const kind = /attachment/i.test(description) ? "attachment" : supply ? "supply" : equipment ? "equipment" : "equipment";
+      return {
+        kind,
+        description,
+        quantity: line.quantity,
+        rate: line.rate,
+        unit: line.unit || (kind === "supply" ? "each" : "hours"),
+        equipmentId: equipment?.id || "",
+        supplyId: supply?.id || "",
+      };
+    }));
     setEditNotes(inv.notes || "");
     setEditDue(inv.dueDate ? new Date(inv.dueDate).toISOString().slice(0, 10) : "");
     setEditError("");
   };
 
   const addEquipmentLine = () => {
-    setEditLines([...editLines, { description: "", quantity: "", rate: 0, unit: "hours", equipmentId: "" }]);
+    setEditLines([...editLines, { kind: "equipment", description: "", quantity: "", rate: 0, unit: "hours", equipmentId: "" }]);
+  };
+
+  const addSupplyLine = () => {
+    setEditLines([...editLines, { kind: "supply", description: "", quantity: 1, rate: 0, unit: "each", supplyId: "" }]);
   };
 
   const chooseEquipment = (idx: number, equipmentId: string) => {
@@ -62,10 +75,25 @@ export default function InvoicesPage() {
     const next = [...editLines];
     next[idx] = {
       ...next[idx],
+      kind: "equipment",
       equipmentId,
-      description: equipment ? `${equipment.name} (${equipment.unitNumber}) – machine hours` : "",
+      description: equipment ? `${equipment.name} (${equipment.unitNumber})` : "",
       rate: equipment?.hourlyRate || 0,
       unit: "hours",
+    };
+    setEditLines(next);
+  };
+
+  const chooseSupply = (idx: number, supplyId: string) => {
+    const supply = supplies.find((item: any) => item.id === supplyId);
+    const next = [...editLines];
+    next[idx] = {
+      ...next[idx],
+      kind: "supply",
+      supplyId,
+      description: supply ? `${supply.name}${supply.category ? ` · ${supply.category}` : ""}` : "",
+      rate: supply?.customerPrice || 0,
+      unit: supply?.unit || "each",
     };
     setEditLines(next);
   };
@@ -74,7 +102,8 @@ export default function InvoicesPage() {
     setEditLines([
       ...editLines,
       {
-        description: `${attachment.name} – attachment hours`,
+        kind: "attachment",
+        description: `${attachment.name}`,
         quantity: "",
         rate: attachment.rate || 0,
         unit: "hours",
@@ -88,17 +117,19 @@ export default function InvoicesPage() {
 
   const load = async () => {
     setLoading(true);
-    const [inv, cust, jobRes, eqRes, settingsRes] = await Promise.all([
+    const [inv, cust, jobRes, eqRes, settingsRes, supplyRes] = await Promise.all([
       fetch("/api/invoices").then((r) => r.json()),
       fetch("/api/customers").then((r) => r.json()),
       fetch("/api/jobs").then((r) => r.json()),
       fetch("/api/equipment").then((r) => r.json()),
       fetch("/api/settings").then((r) => r.json()),
+      fetch("/api/supplies").then((r) => r.json()),
     ]);
     setInvoices(Array.isArray(inv) ? inv : []);
     setCustomers(Array.isArray(cust) ? cust : []);
     setJobs(Array.isArray(jobRes) ? jobRes : []);
     setEquipmentList(Array.isArray(eqRes) ? eqRes : []);
+    setSupplies(Array.isArray(supplyRes) ? supplyRes.filter((item: any) => item.active !== false) : []);
     if (settingsRes?.taxRate != null) setTaxRate(Number(settingsRes.taxRate));
     setLoading(false);
   };
@@ -463,88 +494,105 @@ export default function InvoicesPage() {
       />
 
       <Modal open={!!editTarget} onClose={() => !savingEdit && setEditTarget(null)} title={`Edit ${editTarget?.number || "invoice"}`}>
-        <div className="space-y-4">
-          <p className="text-xs text-muted-foreground">Click Add line, then choose one of your machines and enter the hours.</p>
-          {editLines.map((line, idx) => {
-            const equipment = equipmentList.find((item: any) => item.id === line.equipmentId);
-            return (
+        <div className="space-y-5">
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">Equipment</h3>
+                <p className="text-xs text-muted-foreground">Add a machine and enter the hours worked.</p>
+              </div>
+              <button type="button" onClick={addEquipmentLine} className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground">+ Add equipment</button>
+            </div>
+            {editLines.filter((line) => line.kind !== "supply" && line.kind !== "attachment").length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">No equipment added.</p>
+            )}
+            {editLines.map((line, idx) => {
+              if (line.kind === "supply" || line.kind === "attachment") return null;
+              const equipment = equipmentList.find((item: any) => item.id === line.equipmentId);
+              return (
+                <div key={idx} className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
+                  <div className="flex items-center gap-2">
+                    <select value={line.equipmentId || ""} onChange={(e) => chooseEquipment(idx, e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                      <option value="">Select equipment</option>
+                      {equipmentList.map((item: any) => (
+                        <option key={item.id} value={item.id}>{item.name} ({item.unitNumber}) · ${item.hourlyRate}/hr</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))} className="rounded-lg border border-border px-2 py-2 text-muted-foreground hover:text-danger">×</button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="number" step="0.1" value={line.quantity} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], quantity: e.target.value }; setEditLines(next); }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Hours" />
+                    <input type="number" step="0.01" value={line.rate} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], rate: Number(e.target.value) }; setEditLines(next); }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Hourly rate" />
+                  </div>
+                  {equipment?.attachments?.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {equipment.attachments.map((attachment: any) => (
+                        <button key={attachment.id} type="button" onClick={() => addAttachmentLine(equipment.id, attachment)} className="rounded-full border border-border px-3 py-1 text-xs text-accent">+ {attachment.name}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Attachments</h3>
+              <p className="text-xs text-muted-foreground">Added from the equipment above.</p>
+            </div>
+            {editLines.filter((line) => line.kind === "attachment").length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">No attachments added.</p>
+            )}
+            {editLines.map((line, idx) => line.kind !== "attachment" ? null : (
+              <div key={idx} className="grid grid-cols-12 items-center gap-2 rounded-lg border border-border p-3">
+                <div className="col-span-6 text-sm">{line.description}</div>
+                <input type="number" step="0.1" value={line.quantity} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], quantity: e.target.value }; setEditLines(next); }} className="col-span-2 rounded-lg border border-border bg-background px-2 py-2 text-sm" placeholder="Hours" />
+                <input type="number" step="0.01" value={line.rate} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], rate: Number(e.target.value) }; setEditLines(next); }} className="col-span-3 rounded-lg border border-border bg-background px-2 py-2 text-sm" placeholder="Rate" />
+                <button type="button" onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))} className="col-span-1 text-muted-foreground hover:text-danger">×</button>
+              </div>
+            ))}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">Supplies</h3>
+                <p className="text-xs text-muted-foreground">Add fuel, materials, or other supplies from your list.</p>
+              </div>
+              <button type="button" onClick={addSupplyLine} className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-accent">+ Add supply</button>
+            </div>
+            {editLines.filter((line) => line.kind === "supply").length === 0 && (
+              <p className="rounded-lg border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">No supplies added.</p>
+            )}
+            {editLines.map((line, idx) => line.kind !== "supply" ? null : (
               <div key={idx} className="space-y-2 rounded-lg border border-border p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <select
-                    value={line.equipmentId || ""}
-                    onChange={(e) => chooseEquipment(idx, e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">Add one of your equipment</option>
-                    {equipmentList.map((item: any) => (
-                      <option key={item.id} value={item.id}>{item.name} ({item.unitNumber}) · ${item.hourlyRate}/hr</option>
+                <div className="flex items-center gap-2">
+                  <select value={line.supplyId || ""} onChange={(e) => chooseSupply(idx, e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                    <option value="">Select supply</option>
+                    {supplies.map((item: any) => (
+                      <option key={item.id} value={item.id}>{item.name}{item.category ? ` · ${item.category}` : ""} · ${item.customerPrice}/{item.unit || "each"}</option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-danger">×</button>
+                  <button type="button" onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))} className="rounded-lg border border-border px-2 py-2 text-muted-foreground hover:text-danger">×</button>
                 </div>
-                <input
-                  value={line.description || ""}
-                  onChange={(e) => {
-                    const next = [...editLines];
-                    next[idx] = { ...next[idx], description: e.target.value };
-                    setEditLines(next);
-                  }}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  placeholder="Description"
-                />
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={line.quantity}
-                    onChange={(e) => {
-                      const next = [...editLines];
-                      next[idx] = { ...next[idx], quantity: e.target.value };
-                      setEditLines(next);
-                    }}
-                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    placeholder="Hours"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={line.rate}
-                    onChange={(e) => {
-                      const next = [...editLines];
-                      next[idx] = { ...next[idx], rate: Number(e.target.value) };
-                      setEditLines(next);
-                    }}
-                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    placeholder="Rate"
-                  />
+                  <input type="number" step="0.1" value={line.quantity} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], quantity: e.target.value }; setEditLines(next); }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Quantity" />
+                  <input type="number" step="0.01" value={line.rate} onChange={(e) => { const next = [...editLines]; next[idx] = { ...next[idx], rate: Number(e.target.value) }; setEditLines(next); }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Price" />
                 </div>
-                {equipment?.attachments?.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {equipment.attachments.map((attachment: any) => (
-                      <button
-                        key={attachment.id}
-                        type="button"
-                        onClick={() => addAttachmentLine(equipment.id, attachment)}
-                        className="rounded-full border border-border px-3 py-1 text-xs text-accent"
-                      >
-                        + {attachment.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-            );
-          })}
-          <button type="button" onClick={addEquipmentLine} className="rounded-lg border border-border px-3 py-2 text-sm text-accent">
-            + Add line
-          </button>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Due date</label>
-            <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Notes</label>
-            <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
+            ))}
+          </section>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Due date</label>
+              <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Notes</label>
+              <input value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" placeholder="Optional notes" />
+            </div>
           </div>
           <div className="rounded-lg bg-emerald-500/10 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${editSubtotal.toFixed(2)}</span></div>
@@ -558,8 +606,9 @@ export default function InvoicesPage() {
               disabled={savingEdit}
               onClick={async () => {
                 if (!editTarget) return;
-                if (editLines.length === 0) {
-                  setEditError("Add at least one line.");
+                const lines = editLines.filter((line) => line.description || line.equipmentId || line.supplyId);
+                if (lines.length === 0) {
+                  setEditError("Add equipment or a supply.");
                   return;
                 }
                 setSavingEdit(true);
@@ -567,7 +616,7 @@ export default function InvoicesPage() {
                 const res = await fetch(`/api/invoices/${editTarget.id}`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ notes: editNotes, dueDate: editDue || null, lines: editLines }),
+                  body: JSON.stringify({ notes: editNotes, dueDate: editDue || null, lines }),
                 });
                 setSavingEdit(false);
                 if (!res.ok) {
