@@ -1,8 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { isConfiguredOwner } from "@/lib/owner";
+import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -39,7 +38,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             organizationId: user.organizationId,
             organizationName: user.organization.name,
             organizationStatus: user.organization.status,
-            tokenVersion: user.tokenVersion,
           };
         } catch (err: any) {
           console.error("[auth] database error:", err.message);
@@ -58,36 +56,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.organizationId = (user as any).organizationId;
         token.organizationName = (user as any).organizationName;
         token.organizationStatus = (user as any).organizationStatus;
-        token.tokenVersion = (user as any).tokenVersion || 0;
-      }
-      if (token.sub) {
-        try {
-          const current = await prisma.user.findUnique({
-            where: { id: token.sub },
-            select: { tokenVersion: true, organization: { select: { status: true } } },
-          });
-          if (!current || current.tokenVersion !== (token.tokenVersion || 0)) {
-            return { invalid: true } as any;
-          }
-          if (current.organization?.status) {
-            token.organizationStatus = current.organization.status;
-          }
-        } catch (err: any) {
-          console.error("[auth] tokenVersion check skipped:", err.message);
-        }
       }
       // Always recompute owner flag (user is only present on initial sign-in)
-      const ownerId = process.env.OWNER_USER_ID?.trim();
-      if (!ownerId) {
-        console.error("[auth] OWNER_USER_ID is not set. Admin access is disabled.");
-      }
-      token.isOwner = isConfiguredOwner(token.sub || (user as any)?.id);
+      const ownerId = process.env.OWNER_USER_ID;
+      const email = ((user as any)?.email || (token as any).email || "").toLowerCase();
+      const ownerEmails = ["admin@equipmentai.com", "jessereinink260@gmail.com"];
+      token.isOwner = ownerId
+        ? token.sub === ownerId || (user as any)?.id === ownerId || ownerEmails.includes(email)
+        : ownerEmails.includes(email);
       return token;
     },
     async session({ session, token }) {
-      if ((token as any).invalid) {
-        return { ...session, user: undefined } as any;
-      }
       if (session.user) {
         (session.user as any).id = token.sub;
         (session.user as any).organizationId = token.organizationId;

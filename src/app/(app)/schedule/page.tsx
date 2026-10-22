@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -10,7 +10,7 @@ export default function SchedulePage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const emptyForm = {
+  const [form, setForm] = useState({
     title: "",
     description: "",
     customerId: "",
@@ -22,49 +22,12 @@ export default function SchedulePage() {
     longitude: "",
     notes: "",
     status: "Scheduled",
-  };
-  const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [toDelete, setToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-
-  const toDateInput = (value?: string | null) => {
-    if (!value) return "";
-    const date = new Date(value);
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${date.getFullYear()}-${month}-${day}`;
-  };
-
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(emptyForm);
-    setError("");
-    setShowForm(true);
-  };
-
-  const openEdit = (job: any) => {
-    setEditingId(job.id);
-    setForm({
-      title: job.title || "",
-      description: "",
-      customerId: job.customerId || "",
-      equipmentId: job.equipmentId || "",
-      startDate: toDateInput(job.startDate),
-      endDate: toDateInput(job.endDate),
-      location: job.location || "",
-      latitude: job.latitude ?? "",
-      longitude: job.longitude ?? "",
-      notes: job.notes || "",
-      status: job.status || "Scheduled",
-    });
-    setError("");
-    setShowForm(true);
-  };
 
   const load = async () => {
     const [j, c, e] = await Promise.all([
@@ -81,7 +44,7 @@ export default function SchedulePage() {
 
   const selectedCustomer = customers.find((c) => c.id === form.customerId);
 
-  const save = async (e: React.FormEvent) => {
+  const create = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!form.title.trim() || !form.customerId) {
@@ -89,8 +52,8 @@ export default function SchedulePage() {
       return;
     }
     setSaving(true);
-    const res = await fetch(editingId ? `/api/jobs/${editingId}` : "/api/jobs", {
-      method: editingId ? "PATCH" : "POST",
+    const res = await fetch("/api/jobs", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
@@ -101,12 +64,11 @@ export default function SchedulePage() {
     setSaving(false);
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || "Could not save job");
+      setError(data.error || "Could not schedule");
       return;
     }
     setShowForm(false);
-    setEditingId(null);
-    setForm(emptyForm);
+    setForm({ title: "", description: "", customerId: "", equipmentId: "", startDate: "", endDate: "", location: "", latitude: "", longitude: "", notes: "", status: "Scheduled" });
     load();
   };
 
@@ -119,7 +81,7 @@ export default function SchedulePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Schedule</h1>
-        <button onClick={openCreate} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground">
           <Plus className="h-4 w-4" /> Schedule a Job
         </button>
       </div>
@@ -154,29 +116,19 @@ export default function SchedulePage() {
                 <div>
                   <div className="font-medium">{j.title}</div>
                   <div className="text-sm text-muted-foreground">{j.customer?.name || "No customer"} · {j.location || "No job-site address"}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {j.startDate ? new Date(j.startDate).toLocaleDateString() : "Unscheduled"}
-                    {j.endDate ? ` – ${new Date(j.endDate).toLocaleDateString()}` : ""}
-                    {" · "}{j.status}
-                    {j.equipment ? ` · ${j.equipment.name}` : ""}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{j.startDate ? new Date(j.startDate).toLocaleDateString() : "Unscheduled"} · {j.status}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => openEdit(j)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
-                    <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
-                  </button>
-                  <button onClick={() => { setDeleteError(""); setToDelete(j); }} className="text-muted-foreground hover:text-danger" title="Delete">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                <button onClick={() => setToDelete(j)} className="text-muted-foreground hover:text-danger" title="Delete">
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             ))}
           </div>
         )}
       </section>
 
-      <Modal open={showForm} onClose={() => { setShowForm(false); setEditingId(null); }} title={editingId ? "Edit Job" : "Schedule a Job"}>
-        <form onSubmit={save} className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Schedule a Job">
+        <form onSubmit={create} className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
           {error && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
 
           <section className="space-y-2">
@@ -195,6 +147,8 @@ export default function SchedulePage() {
             <h3 className="text-sm font-semibold">Job Details</h3>
             <label className="text-xs text-muted-foreground">Job Title *</label>
             <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            <label className="text-xs text-muted-foreground">Description</label>
+            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
             <label className="text-xs text-muted-foreground">Status</label>
             <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm">
               <option>Scheduled</option>
@@ -249,9 +203,9 @@ export default function SchedulePage() {
           </section>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
+            <button type="button" onClick={() => setShowForm(false)} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
             <button type="submit" disabled={saving} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
-              {saving ? "Saving…" : editingId ? "Save Changes" : "Schedule Job"}
+              {saving ? "Scheduling…" : "Schedule Job"}
             </button>
           </div>
         </form>
@@ -263,12 +217,10 @@ export default function SchedulePage() {
         description={`Permanently delete "${toDelete?.title}"? This cannot be undone.`}
         confirmLabel="Delete Job"
         loading={deleting}
-        error={deleteError}
-        onClose={() => { if (!deleting) { setToDelete(null); setDeleteError(""); } }}
+        onClose={() => setToDelete(null)}
         onConfirm={async () => {
           if (!toDelete) return;
           setDeleting(true);
-          setDeleteError("");
           const res = await fetch(`/api/jobs/${toDelete.id}`, { method: "DELETE" });
           setDeleting(false);
           if (res.ok) {
@@ -276,7 +228,8 @@ export default function SchedulePage() {
             load();
           } else {
             const data = await res.json();
-            setDeleteError(data.error || "Could not delete");
+            alert(data.error || "Could not delete");
+            setToDelete(null);
           }
         }}
       />
