@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
-import { prisma } from "@/lib/prisma";
+import { quoteTaxAmount, quoteTotal, normalizeTaxRate } from "@/lib/quotes";
 
 export async function GET() {
   const session = await auth();
@@ -12,7 +12,7 @@ export async function GET() {
 
   const quotes = await prisma.quote.findMany({
     where: { organizationId: orgId },
-    include: { customer: true, lines: true },
+    include: { customer: true, lines: true, job: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(quotes);
@@ -31,10 +31,10 @@ export async function POST(req: Request) {
     const number = `Q-${String(count + 1).padStart(4, "0")}`;
 
     const lines = body.lines || [];
-    const subtotal = lines.reduce((sum: number, l: any) => sum + (Number(l.amount) || 0), 0);
-    const taxRate = Number(body.taxRate) || 0;
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+    const subtotal = Math.round(lines.reduce((sum: number, l: any) => sum + (Number(l.quantity) || 0) * (Number(l.rate) || 0), 0) * 100) / 100;
+    const taxRate = normalizeTaxRate(Number(body.taxRate) || 0);
+    const taxAmount = quoteTaxAmount(subtotal, taxRate);
+    const total = quoteTotal(subtotal, taxRate);
 
     const quote = await prisma.quote.create({
       data: {

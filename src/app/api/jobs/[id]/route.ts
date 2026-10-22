@@ -33,8 +33,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Job title and customer are required." }, { status: 400 });
   }
 
-  const customer = await prisma.customer.findFirst({ where: { id: customerId, organizationId: orgId } });
-  if (!customer) return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+  const customer = await prisma.customer.findFirst({ where: { id: customerId, organizationId: orgId, archivedAt: null } });
+  if (!customer) return NextResponse.json({ error: "Customer not found or archived." }, { status: 404 });
 
   const equipmentId = body.equipmentId || null;
   if (equipmentId) {

@@ -86,7 +86,7 @@ export default function SchedulePage() {
       fetch("/api/equipment").then((r) => r.json()),
     ]);
     setJobs(Array.isArray(j) ? j : []);
-    setCustomers(Array.isArray(c) ? c : []);
+    setCustomers(Array.isArray(c) ? c.filter((customer: any) => !customer.archivedAt) : []);
     setEquipment(Array.isArray(e) ? e : []);
   };
 

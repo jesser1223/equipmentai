@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { normalizeTaxRate, quoteTaxAmount, quoteTotal } from "@/lib/quotes";
 
 type Customer = { id: string; name: string };
 type Equipment = { id: string; name: string; unitNumber: string; hourlyRate: number };
@@ -17,7 +18,37 @@ export default function QuotesPage() {
   const [toast, setToast] = useState("");
   const [toDelete, setToDelete] = useState<any>(null);
   const [editTarget, setEditTarget] = useState<any>(null);
+  const [convertTarget, setConvertTarget] = useState<any>(null);
+  const [convertForm, setConvertForm] = useState({ startDate: "", endDate: "", equipmentId: "", location: "" });
+  const [converting, setConverting] = useState(false);
+  const [convertError, setConvertError] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  const setStatus = async (quote: any, status: string) => {
+    const res = await fetch(`/api/quotes/${quote.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setToast(data.error || "Could not update status");
+      setTimeout(() => setToast(""), 2500);
+      return;
+    }
+    load();
+  };
+
+  const openConvert = (quote: any) => {
+    setConvertTarget(quote);
+    setConvertError("");
+    setConvertForm({
+      startDate: "",
+      endDate: "",
+      equipmentId: quote.lines?.find((line: any) => line.equipmentId)?.equipmentId || "",
+      location: quote.location || "",
+    });
+  };
 
   const load = async () => {
     const [q, c, e] = await Promise.all([
@@ -26,7 +57,7 @@ export default function QuotesPage() {
       fetch("/api/equipment").then((r) => r.json()),
     ]);
     setQuotes(Array.isArray(q) ? q : []);
-    setCustomers(Array.isArray(c) ? c : []);
+    setCustomers(Array.isArray(c) ? c.filter((customer: any) => !customer.archivedAt) : []);
     setEquipment(Array.isArray(e) ? e : []);
   };
 
@@ -75,6 +106,17 @@ export default function QuotesPage() {
                   <td className="px-4 py-3">${q.total.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {q.status === "Draft" && <button onClick={() => setStatus(q, "Sent")} className="text-xs text-accent">Mark sent</button>}
+                      {q.status === "Sent" && (
+                        <>
+                          <button onClick={() => setStatus(q, "Accepted")} className="text-xs text-accent">Accept</button>
+                          <button onClick={() => setStatus(q, "Declined")} className="text-xs text-muted-foreground">Decline</button>
+                        </>
+                      )}
+                      {q.status === "Accepted" && !q.job && (
+                        <button onClick={() => openConvert(q)} className="rounded-lg bg-accent px-3 py-1.5 text-xs text-accent-foreground">Convert to job</button>
+                      )}
+                      {q.job && <span className="text-xs text-muted-foreground">Job {q.job.status}</span>}
                       {!q.job && (
                         <button onClick={() => setEditTarget(q)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
                           <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
@@ -137,11 +179,62 @@ export default function QuotesPage() {
             load();
           } else {
             const data = await res.json();
-            alert(data.error || "Could not delete");
+            setToast(data.error || "Could not delete");
+            setTimeout(() => setToast(""), 2500);
             setToDelete(null);
           }
         }}
       />
+      <Modal open={!!convertTarget} onClose={() => !converting && setConvertTarget(null)} title={`Convert ${convertTarget?.number || "quote"}`}>
+        <form
+          className="space-y-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!convertTarget) return;
+            setConverting(true);
+            setConvertError("");
+            const res = await fetch(`/api/quotes/${convertTarget.id}/convert`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(convertForm),
+            });
+            const data = await res.json().catch(() => ({}));
+            setConverting(false);
+            if (!res.ok) {
+              setConvertError(data.error || "Could not convert quote.");
+              return;
+            }
+            setConvertTarget(null);
+            setToast(`Job scheduled: ${data.title}`);
+            setTimeout(() => setToast(""), 2500);
+            load();
+          }}
+        >
+          <p className="text-xs text-muted-foreground">Review the job details. Dates are required and are not guessed.</p>
+          <label className="block text-xs text-muted-foreground">Location
+            <input value={convertForm.location} onChange={(e) => setConvertForm({ ...convertForm, location: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          </label>
+          <label className="block text-xs text-muted-foreground">Equipment
+            <select value={convertForm.equipmentId} onChange={(e) => setConvertForm({ ...convertForm, equipmentId: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              <option value="">No equipment</option>
+              {equipment.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.unitNumber})</option>)}
+            </select>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-muted-foreground">Start date *
+              <input type="date" required value={convertForm.startDate} onChange={(e) => setConvertForm({ ...convertForm, startDate: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs text-muted-foreground">End date
+              <input type="date" value={convertForm.endDate} onChange={(e) => setConvertForm({ ...convertForm, endDate: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </label>
+          </div>
+          {convertError && <p className="text-sm text-red-400">{convertError}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setConvertTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
+            <button disabled={converting} className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">{converting ? "Converting…" : "Create job"}</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
@@ -172,7 +265,7 @@ function QuoteForm({
         }))
       : [{ equipmentId: "", description: "", quantity: 1, rate: 0, amount: 0 }]
   );
-  const [taxRate, setTaxRate] = useState(initial?.taxRate || 0);
+  const [taxRate, setTaxRate] = useState(normalizeTaxRate(Number(initial?.taxRate) || 0));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -194,8 +287,8 @@ function QuoteForm({
   };
 
   const subtotal = lines.reduce((s, l) => s + l.amount, 0);
-  const tax = subtotal * (taxRate / 100);
-  const total = subtotal + tax;
+  const tax = quoteTaxAmount(subtotal, taxRate);
+  const total = quoteTotal(subtotal, taxRate);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,7 +394,8 @@ function QuoteForm({
         <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
         <div className="mt-1 flex items-center justify-between gap-2">
           <span>Tax %</span>
-          <input type="number" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} className="w-20 rounded border border-border bg-card px-2 py-0.5 text-right text-sm" />
+          <span>GST ({(normalizeTaxRate(taxRate) * 100).toFixed(1)}%)</span>
+          <input type="number" step="0.001" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} className="w-20 rounded border border-border bg-card px-2 py-0.5 text-right text-sm" title="0.05 means 5%" />
         </div>
         <div className="mt-1 flex justify-between font-medium"><span>Total</span><span>${total.toFixed(2)}</span></div>
       </div>

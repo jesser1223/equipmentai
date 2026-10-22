@@ -43,6 +43,10 @@ export default function SettingsPage() {
         <Field label="Invoice prefix" value={org.invoicePrefix || "INV"} onChange={(v) => setOrg({ ...org, invoicePrefix: v })} />
         <Field label="Default invoice notes" value={org.defaultNotes || ""} onChange={(v) => setOrg({ ...org, defaultNotes: v })} />
         <Field label="Payment terms" value={org.paymentTerms || ""} onChange={(v) => setOrg({ ...org, paymentTerms: v })} />
+        <Field label="GST number" value={org.gstNumber || ""} onChange={(v) => setOrg({ ...org, gstNumber: v })} />
+        <Field label="Logo URL" value={org.logoUrl || ""} onChange={(v) => setOrg({ ...org, logoUrl: v })} />
+        <Field label="Invoice footer" value={org.invoiceFooter || ""} onChange={(v) => setOrg({ ...org, invoiceFooter: v })} />
+        <Field label="Reply-to email" value={org.replyToEmail || ""} onChange={(v) => setOrg({ ...org, replyToEmail: v })} />
 
         <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50">
           {saving ? "Saving…" : "Save Settings"}

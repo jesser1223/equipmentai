@@ -34,6 +34,10 @@ export async function PATCH(req: Request) {
       invoicePrefix: body.invoicePrefix,
       defaultNotes: body.defaultNotes,
       paymentTerms: body.paymentTerms,
+      gstNumber: body.gstNumber,
+      logoUrl: body.logoUrl,
+      invoiceFooter: body.invoiceFooter,
+      replyToEmail: body.replyToEmail,
     },
   });
   return NextResponse.json(updated);

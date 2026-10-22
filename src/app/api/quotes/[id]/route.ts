@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
-import { prisma } from "@/lib/prisma";
+import { normalizeTaxRate, quoteTaxAmount, quoteTotal, quoteTransitionError } from "@/lib/quotes";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -21,10 +21,26 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const body = await req.json();
+  if (body.status && body.status !== quote.status) {
+    const transitionError = quoteTransitionError(quote.status, body.status, !!quote.job);
+    if (transitionError) return NextResponse.json({ error: transitionError }, { status: 400 });
+  }
+
   const customer = await prisma.customer.findFirst({
-    where: { id: body.customerId, organizationId: orgId },
+    where: { id: body.customerId || quote.customerId, organizationId: orgId, archivedAt: null },
   });
-  if (!customer) return NextResponse.json({ error: "Customer not found" }, { status: 400 });
+  if (!customer && body.customerId && body.customerId !== quote.customerId) {
+    return NextResponse.json({ error: "Customer not found or archived." }, { status: 400 });
+  }
+
+  if (body.status && !body.lines) {
+    const updated = await prisma.quote.update({
+      where: { id },
+      data: { status: body.status },
+      include: { lines: true, customer: true, job: true },
+    });
+    return NextResponse.json(updated);
+  }
 
   const incoming = Array.isArray(body.lines) ? body.lines : [];
   if (incoming.length === 0) {
@@ -53,19 +69,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const subtotal = Math.round(lines.reduce((sum: number, line: { amount: number }) => sum + line.amount, 0) * 100) / 100;
-  const taxRate = Number(body.taxRate) || 0;
-  const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-  const total = Math.round((subtotal + taxAmount) * 100) / 100;
+  const taxRate = normalizeTaxRate(body.taxRate != null ? Number(body.taxRate) : quote.taxRate);
+  const taxAmount = quoteTaxAmount(subtotal, taxRate);
+  const total = quoteTotal(subtotal, taxRate);
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.quoteLine.deleteMany({ where: { quoteId: id } });
     return tx.quote.update({
       where: { id },
       data: {
-        customerId: body.customerId,
-        jobName: body.jobName,
-        location: body.location || null,
-        notes: body.notes || null,
+        customerId: body.customerId || quote.customerId,
+        jobName: body.jobName || quote.jobName,
+        location: body.location ?? quote.location,
+        notes: body.notes ?? quote.notes,
+        status: body.status && !quoteTransitionError(quote.status, body.status, !!quote.job) ? body.status : quote.status,
         taxRate,
         subtotal,
         taxAmount,

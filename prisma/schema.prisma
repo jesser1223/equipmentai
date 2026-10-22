@@ -139,6 +139,7 @@ model Customer {
   company   String?
   address   String?
   notes     String?
+  archivedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

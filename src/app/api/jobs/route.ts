@@ -26,6 +26,11 @@ export async function POST(req: Request) {
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+  const customer = await prisma.customer.findFirst({
+    where: { id: body.customerId, organizationId: orgId, archivedAt: null },
+  });
+  if (!customer) return NextResponse.json({ error: "Customer not found or archived." }, { status: 400 });
+
   const start = body.startDate ? new Date(body.startDate) : null;
   const end = body.endDate ? new Date(body.endDate) : null;
 

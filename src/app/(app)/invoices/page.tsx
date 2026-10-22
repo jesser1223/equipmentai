@@ -126,7 +126,7 @@ export default function InvoicesPage() {
       fetch("/api/supplies").then((r) => r.json()),
     ]);
     setInvoices(Array.isArray(inv) ? inv : []);
-    setCustomers(Array.isArray(cust) ? cust : []);
+    setCustomers(Array.isArray(cust) ? cust.filter((customer: any) => !customer.archivedAt) : []);
     setJobs(Array.isArray(jobRes) ? jobRes : []);
     setEquipmentList(Array.isArray(eqRes) ? eqRes : []);
     setSupplies(Array.isArray(supplyRes) ? supplyRes.filter((item: any) => item.active !== false) : []);
