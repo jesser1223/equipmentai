@@ -7,7 +7,7 @@ async function requireOwnedEquipment(id: string) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
   const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
+  if (blocked) return { error: blocked };
   if (!orgId) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
 
   const item = await prisma.equipment.findFirst({

@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id             String   @id @default(cuid())
+  name           String
+  status         String   @default("Pending")
+  approvedAt     DateTime?
+  approvedById   String?
+  deniedAt       DateTime?
+  deniedReason   String?
+  suspendedAt    DateTime?
+  address        String?
+  phone          String?
+  email          String?
+  logoUrl        String?
+  gstNumber      String?
+  invoiceFooter  String?
+  replyToEmail   String?
+  currency       String   @default("CAD")
+  taxRate        Float    @default(0.05)
+  invoicePrefix  String   @default("INV")
+  nextInvoiceNum Int      @default(1)
+  defaultNotes   String?
+  paymentTerms   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users          User[]
+  equipment      Equipment[]
+  attachments    Attachment[]
+  customers      Customer[]
+  quotes         Quote[]
+  jobs           Job[]
+  invoices       Invoice[]
+  supplies       Supply[]
+  auditLogs      AuditLog[]
+  invoiceEmails  InvoiceEmail[]
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  action         String   // Approved, Denied, Suspended, Restored
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  adminUserId    String
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  passwordHash   String
+  tokenVersion   Int      @default(0)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  resetTokens    PasswordResetToken[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Equipment {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  make          String?
+  model         String?
+  year          Int?
+  unitNumber    String
+  serialNumber  String?
+  description   String?
+  hourlyRate    Float    @default(0)
+  dailyRate     Float    @default(0)
+  status        String   @default("Available")
+  location      String?
+  latitude      Float?
+  longitude     Float?
+  hourMeter     Float?
+  maintenanceIntervalHours Int?
+  lastMaintenanceDate DateTime?
+  nextMaintenanceDue  DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  quoteLines    QuoteLine[]
+  jobs          Job[]
+  attachments   Attachment[]
+
+  @@unique([organizationId, unitNumber])
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  name          String
+  manufacturer  String?
+  model         String?
+  serialNumber  String?
+  billingMethod String   @default("hourly") // hourly, daily, per-job
+  rate          Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  equipmentId   String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  quotes    Quote[]
+  jobs      Job[]
+  invoices  Invoice[]
+}
+
+model Quote {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  status      String   @default("Draft") // Draft, Sent, Accepted, Declined, Expired
+  jobName     String
+  location    String?
+  proposedDate DateTime?
+  notes       String?
+  subtotal    Float    @default(0)
+  taxRate     Float    @default(0)
+  taxAmount   Float    @default(0)
+  total       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  lines       QuoteLine[]
+  job         Job?
+}
+
+model QuoteLine {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  unit        String   @default("hours") // hours, days
+  rate        Float
+  amount      Float
+  createdAt   DateTime @default(now())
+
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  status      String   @default("Scheduled")
+  startDate   DateTime?
+  endDate     DateTime?
+  location    String?
+  latitude    Float?
+  longitude   Float?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  quoteId     String?  @unique
+  quote       Quote?   @relation(fields: [quoteId], references: [id])
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+  invoice     Invoice?
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  number      String
+  status      String   @default("Draft") // Draft, Issued, Partially Paid, Paid, Overdue, Void
+  issueDate   DateTime @default(now())
+  dueDate     DateTime?
+  subtotal    Float    @default(0)
+  taxRate     Float    @default(0)
+  taxAmount   Float    @default(0)
+  total       Float    @default(0)
+  amountPaid  Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  jobId       String?  @unique
+  job         Job?     @relation(fields: [jobId], references: [id])
+
+  lines       InvoiceLine[]
+  payments    Payment[]
+  emails      InvoiceEmail[]
+
+  @@unique([organizationId, number])
+}
+
+model InvoiceEmail {
+  id             String   @id @default(cuid())
+  to             String
+  subject        String
+  status         String   @default("Queued") // Queued, Sent, Failed
+  providerId     String?
+  error          String?
+  createdAt      DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  userId         String?
+
+  @@index([invoiceId])
+}
+
+model Supply {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  category        String?
+  unit            String   @default("each")
+  costPrice       Float    @default(0)
+  markupPercent   Float    @default(10)
+  customerPrice   Float    @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model InvoiceLine {
+  id          String   @id @default(cuid())
+  description String
+  quantity    Float    @default(1)
+  unit        String   @default("hours")
+  rate        Float
+  amount      Float
+  createdAt   DateTime @default(now())
+
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  amount      Float
+  method      String?
+  reference   String?
+  notes       String?
+  paidAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
