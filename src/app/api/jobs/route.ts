@@ -45,6 +45,8 @@ export async function POST(req: Request) {
     }
   }
 
+  const location = body.location?.trim() || null;
+
   const job = await prisma.job.create({
     data: {
       title: body.title,
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
       equipmentId: body.equipmentId || null,
       startDate: start,
       endDate: end,
-      location: body.location,
+      location,
       notes: body.notes,
       status: "Scheduled",
     },

@@ -65,6 +65,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
+  const location = body.location?.trim() || null;
+  const addressChanged = location !== (result.job.location || null);
+
   const updated = await prisma.job.update({
     where: { id },
     data: {
@@ -74,9 +77,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       status,
       startDate: start,
       endDate: end,
-      location: body.location || null,
-      latitude: body.latitude != null && body.latitude !== "" ? Number(body.latitude) : null,
-      longitude: body.longitude != null && body.longitude !== "" ? Number(body.longitude) : null,
+      location,
+      latitude: addressChanged ? null : result.job.latitude,
+      longitude: addressChanged ? null : result.job.longitude,
       notes: body.notes || null,
     },
     include: { customer: true, equipment: true },

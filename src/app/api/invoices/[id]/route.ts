@@ -24,33 +24,91 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) return NextResponse.json({ error: "Org not found" }, { status: 404 });
 
-  const incoming = Array.isArray(body.lines) ? body.lines : null;
-  if (!incoming || incoming.length === 0) {
-    return NextResponse.json({ error: "Add at least one line." }, { status: 400 });
-  }
+  const lines: { description: string; quantity: number; unit: string; rate: number; amount: number }[] = [];
 
-  let lines: { description: string; quantity: number; unit: string; rate: number; amount: number }[];
-  try {
-    lines = incoming.map((line: any) => {
+  if (Array.isArray(body.lines) && body.lines.length > 0) {
+    for (const line of body.lines) {
       const quantity = Number(line.quantity);
       const rate = Number(line.rate);
-      if (!line.description || !quantity || quantity <= 0 || rate < 0 || Number.isNaN(rate)) {
-        throw new Error("Each line needs a description, quantity greater than zero, and a valid rate.");
+      const description = String(line.description || "").trim();
+      if (!description || !quantity || quantity <= 0 || Number.isNaN(rate) || rate < 0) {
+        return NextResponse.json({ error: "Each line needs a description, hours greater than zero, and a valid rate." }, { status: 400 });
       }
-      const amount = Math.round(quantity * rate * 100) / 100;
-      return {
-        description: String(line.description).trim(),
+      lines.push({
+        description,
         quantity,
         unit: line.unit || "hours",
         rate,
-        amount,
-      };
+        amount: Math.round(quantity * rate * 100) / 100,
+      });
+    }
+  } else if (body.equipment?.id) {
+    const hours = Number(body.equipment.hours);
+    if (!hours || hours <= 0) {
+      return NextResponse.json({ error: "Enter machine hours greater than zero." }, { status: 400 });
+    }
+    const equipment = await prisma.equipment.findFirst({
+      where: { id: body.equipment.id, organizationId: orgId },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Invalid line items." }, { status: 400 });
+    if (!equipment) return NextResponse.json({ error: "Equipment not found" }, { status: 400 });
+    if (equipment.hourlyRate <= 0) {
+      return NextResponse.json({ error: "Selected equipment has no hourly rate configured." }, { status: 400 });
+    }
+    lines.push({
+      description: `${equipment.name} (${equipment.unitNumber}) – machine hours`,
+      quantity: hours,
+      unit: "hours",
+      rate: equipment.hourlyRate,
+      amount: Math.round(hours * equipment.hourlyRate * 100) / 100,
+    });
   }
 
-  const subtotal = Math.round(lines.reduce((sum, line) => sum + line.amount, 0) * 100) / 100;
+  if (Array.isArray(body.attachments)) {
+    for (const item of body.attachments) {
+      const hours = Number(item.hours);
+      if (!hours || hours <= 0) continue;
+      const attachment = await prisma.attachment.findFirst({
+        where: { id: item.id, organizationId: orgId },
+      });
+      if (!attachment) return NextResponse.json({ error: "Attachment not found" }, { status: 400 });
+      if (attachment.rate <= 0) {
+        return NextResponse.json({ error: `Attachment ${attachment.name} has no rate configured.` }, { status: 400 });
+      }
+      lines.push({
+        description: `${attachment.name} – attachment hours`,
+        quantity: hours,
+        unit: "hours",
+        rate: attachment.rate,
+        amount: Math.round(hours * attachment.rate * 100) / 100,
+      });
+    }
+  }
+
+  if (Array.isArray(body.otherCharges)) {
+    for (const charge of body.otherCharges) {
+      const amount = Number(charge.amount);
+      if (!amount || amount <= 0) continue;
+      const description = String(charge.description || "").trim();
+      if (!description) {
+        return NextResponse.json({ error: "Other charges need a description." }, { status: 400 });
+      }
+      lines.push({
+        description,
+        quantity: 1,
+        unit: "each",
+        rate: amount,
+        amount,
+      });
+    }
+  }
+
+  if (lines.length === 0) {
+    return NextResponse.json({ error: "Add a machine, attachment, or other charge." }, { status: 400 });
+  }
+
+  const subtotal = Math.round(
+    lines.reduce((sum: number, line: { amount: number }) => sum + line.amount, 0) * 100
+  ) / 100;
   const taxAmount = Math.round(subtotal * (org.taxRate || 0) * 100) / 100;
   const total = Math.round((subtotal + taxAmount) * 100) / 100;
 

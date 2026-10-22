@@ -18,8 +18,11 @@ export default function SchedulePage() {
     startDate: "",
     endDate: "",
     location: "",
-    latitude: "",
-    longitude: "",
+    street: "",
+    city: "",
+    province: "BC",
+    postalCode: "",
+    country: "Canada",
     notes: "",
     status: "Scheduled",
   };
@@ -47,6 +50,17 @@ export default function SchedulePage() {
     setShowForm(true);
   };
 
+  const splitAddress = (value?: string | null) => {
+    const parts = (value || "").split(",").map((part) => part.trim()).filter(Boolean);
+    return {
+      street: parts[0] || "",
+      city: parts[1] || "",
+      province: parts[2] || "BC",
+      postalCode: parts[3] || "",
+      country: parts[4] || "Canada",
+    };
+  };
+
   const openEdit = (job: any) => {
     setEditingId(job.id);
     setForm({
@@ -57,8 +71,7 @@ export default function SchedulePage() {
       startDate: toDateInput(job.startDate),
       endDate: toDateInput(job.endDate),
       location: job.location || "",
-      latitude: job.latitude ?? "",
-      longitude: job.longitude ?? "",
+      ...splitAddress(job.location),
       notes: job.notes || "",
       status: job.status || "Scheduled",
     });
@@ -88,15 +101,19 @@ export default function SchedulePage() {
       setError("Job title and customer are required.");
       return;
     }
+    if (!form.street.trim() || !form.city.trim()) {
+      setError("Street address and city are required so the job can be placed on the map.");
+      return;
+    }
+    const location = [form.street, form.city, form.province, form.postalCode, form.country]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(", ");
     setSaving(true);
     const res = await fetch(editingId ? `/api/jobs/${editingId}` : "/api/jobs", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        latitude: form.latitude ? Number(form.latitude) : null,
-        longitude: form.longitude ? Number(form.longitude) : null,
-      }),
+      body: JSON.stringify({ ...form, location }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -205,17 +222,27 @@ export default function SchedulePage() {
 
           <section className="space-y-2">
             <h3 className="text-sm font-semibold">Job Location</h3>
-            <p className="text-[11px] text-muted-foreground">Job-site address (not the billing address or equipment location).</p>
-            <label className="text-xs text-muted-foreground">Job-site Address</label>
-            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-[11px] text-muted-foreground">Fill each box. Street and city are required so the map can find the job.</p>
+            <label className="text-xs text-muted-foreground">Street Address *</label>
+            <input required value={form.street} onChange={(e) => setForm({ ...form, street: e.target.value })} placeholder="123 Main St" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className="text-xs text-muted-foreground">Latitude (optional)</label>
-                <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                <label className="text-xs text-muted-foreground">City *</label>
+                <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Vancouver" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Longitude (optional)</label>
-                <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                <label className="text-xs text-muted-foreground">Province</label>
+                <input value={form.province} onChange={(e) => setForm({ ...form, province: e.target.value })} placeholder="BC" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Postal Code</label>
+                <input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder="V6B 1A1" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Country</label>
+                <input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder="Canada" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
               </div>
             </div>
           </section>

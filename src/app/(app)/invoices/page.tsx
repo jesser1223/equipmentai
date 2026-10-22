@@ -39,6 +39,53 @@ export default function InvoicesPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
 
+  const openEdit = (inv: any) => {
+    setEditTarget(inv);
+    setEditLines((inv.lines || []).map((line: any) => ({
+      description: line.description || "",
+      quantity: line.quantity,
+      rate: line.rate,
+      unit: line.unit || "hours",
+      equipmentId: "",
+    })));
+    setEditNotes(inv.notes || "");
+    setEditDue(inv.dueDate ? new Date(inv.dueDate).toISOString().slice(0, 10) : "");
+    setEditError("");
+  };
+
+  const addEquipmentLine = () => {
+    setEditLines([...editLines, { description: "", quantity: "", rate: 0, unit: "hours", equipmentId: "" }]);
+  };
+
+  const chooseEquipment = (idx: number, equipmentId: string) => {
+    const equipment = equipmentList.find((item: any) => item.id === equipmentId);
+    const next = [...editLines];
+    next[idx] = {
+      ...next[idx],
+      equipmentId,
+      description: equipment ? `${equipment.name} (${equipment.unitNumber}) – machine hours` : "",
+      rate: equipment?.hourlyRate || 0,
+      unit: "hours",
+    };
+    setEditLines(next);
+  };
+
+  const addAttachmentLine = (equipmentId: string, attachment: any) => {
+    setEditLines([
+      ...editLines,
+      {
+        description: `${attachment.name} – attachment hours`,
+        quantity: "",
+        rate: attachment.rate || 0,
+        unit: "hours",
+        equipmentId,
+        attachmentId: attachment.id,
+      },
+    ]);
+  };
+
+  const editSubtotal = editLines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.rate) || 0), 0);
+
   const load = async () => {
     setLoading(true);
     const [inv, cust, jobRes, eqRes, settingsRes] = await Promise.all([
@@ -388,13 +435,7 @@ export default function InvoicesPage() {
                     </button>
                     {inv.status !== "Void" && (
                       <button
-                        onClick={() => {
-                          setEditTarget(inv);
-                          setEditLines((inv.lines || []).map((l: any) => ({ ...l })));
-                          setEditNotes(inv.notes || "");
-                          setEditDue(inv.dueDate ? String(inv.dueDate).slice(0, 10) : "");
-                          setEditError("");
-                        }}
+                        onClick={() => openEdit(inv)}
                         className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
                       >
                         <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
@@ -423,6 +464,80 @@ export default function InvoicesPage() {
 
       <Modal open={!!editTarget} onClose={() => !savingEdit && setEditTarget(null)} title={`Edit ${editTarget?.number || "invoice"}`}>
         <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">Click Add line, then choose one of your machines and enter the hours.</p>
+          {editLines.map((line, idx) => {
+            const equipment = equipmentList.find((item: any) => item.id === line.equipmentId);
+            return (
+              <div key={idx} className="space-y-2 rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <select
+                    value={line.equipmentId || ""}
+                    onChange={(e) => chooseEquipment(idx, e.target.value)}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">Add one of your equipment</option>
+                    {equipmentList.map((item: any) => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.unitNumber}) · ${item.hourlyRate}/hr</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))} className="text-muted-foreground hover:text-danger">×</button>
+                </div>
+                <input
+                  value={line.description || ""}
+                  onChange={(e) => {
+                    const next = [...editLines];
+                    next[idx] = { ...next[idx], description: e.target.value };
+                    setEditLines(next);
+                  }}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  placeholder="Description"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={line.quantity}
+                    onChange={(e) => {
+                      const next = [...editLines];
+                      next[idx] = { ...next[idx], quantity: e.target.value };
+                      setEditLines(next);
+                    }}
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    placeholder="Hours"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={line.rate}
+                    onChange={(e) => {
+                      const next = [...editLines];
+                      next[idx] = { ...next[idx], rate: Number(e.target.value) };
+                      setEditLines(next);
+                    }}
+                    className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    placeholder="Rate"
+                  />
+                </div>
+                {equipment?.attachments?.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {equipment.attachments.map((attachment: any) => (
+                      <button
+                        key={attachment.id}
+                        type="button"
+                        onClick={() => addAttachmentLine(equipment.id, attachment)}
+                        className="rounded-full border border-border px-3 py-1 text-xs text-accent"
+                      >
+                        + {attachment.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          <button type="button" onClick={addEquipmentLine} className="rounded-lg border border-border px-3 py-2 text-sm text-accent">
+            + Add line
+          </button>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Due date</label>
             <input type="date" value={editDue} onChange={(e) => setEditDue(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
@@ -431,77 +546,11 @@ export default function InvoicesPage() {
             <label className="text-xs font-medium text-muted-foreground">Notes</label>
             <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" rows={2} />
           </div>
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">Line items</div>
-            {editLines.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2">
-                <input
-                  value={line.description || ""}
-                  onChange={(e) => {
-                    const next = [...editLines];
-                    next[idx] = { ...next[idx], description: e.target.value };
-                    setEditLines(next);
-                  }}
-                  className="col-span-6 rounded-lg border border-border bg-background px-2 py-2 text-sm"
-                  placeholder="Description"
-                />
-                <input
-                  type="number"
-                  step="0.1"
-                  value={line.quantity}
-                  onChange={(e) => {
-                    const next = [...editLines];
-                    next[idx] = { ...next[idx], quantity: Number(e.target.value) };
-                    setEditLines(next);
-                  }}
-                  className="col-span-2 rounded-lg border border-border bg-background px-2 py-2 text-sm"
-                  placeholder="Qty"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={line.rate}
-                  onChange={(e) => {
-                    const next = [...editLines];
-                    next[idx] = { ...next[idx], rate: Number(e.target.value) };
-                    setEditLines(next);
-                  }}
-                  className="col-span-3 rounded-lg border border-border bg-background px-2 py-2 text-sm"
-                  placeholder="Rate"
-                />
-                <button
-                  type="button"
-                  onClick={() => setEditLines(editLines.filter((_, i) => i !== idx))}
-                  className="col-span-1 text-muted-foreground hover:text-danger"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => setEditLines([...editLines, { description: "", quantity: 1, rate: 0, unit: "each" }])}
-              className="text-xs text-accent"
-            >
-              + Add line
-            </button>
+          <div className="rounded-lg bg-emerald-500/10 p-3 text-sm">
+            <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${editSubtotal.toFixed(2)}</span></div>
+            <div className="mt-1 flex justify-between text-muted-foreground"><span>GST ({(taxRate * 100).toFixed(1)}%)</span><span>${(editSubtotal * taxRate).toFixed(2)}</span></div>
+            <div className="mt-2 flex justify-between font-semibold"><span>New total</span><span>${(editSubtotal * (1 + taxRate)).toFixed(2)}</span></div>
           </div>
-          {(() => {
-            const subtotal = editLines.reduce((sum, line) => {
-              const qty = Number(line.quantity) || 0;
-              const rate = Number(line.rate) || 0;
-              return sum + qty * rate;
-            }, 0);
-            const gst = subtotal * taxRate;
-            const total = subtotal + gst;
-            return (
-              <div className="rounded-lg bg-emerald-500/10 p-3 text-sm">
-                <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="mt-1 flex justify-between text-muted-foreground"><span>GST ({(taxRate * 100).toFixed(1)}%)</span><span>${gst.toFixed(2)}</span></div>
-                <div className="mt-2 flex justify-between font-semibold"><span>New total</span><span>${total.toFixed(2)}</span></div>
-              </div>
-            );
-          })()}
           {editError && <p className="text-sm text-red-400">{editError}</p>}
           <div className="flex justify-end gap-2">
             <button onClick={() => setEditTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
@@ -509,6 +558,10 @@ export default function InvoicesPage() {
               disabled={savingEdit}
               onClick={async () => {
                 if (!editTarget) return;
+                if (editLines.length === 0) {
+                  setEditError("Add at least one line.");
+                  return;
+                }
                 setSavingEdit(true);
                 setEditError("");
                 const res = await fetch(`/api/invoices/${editTarget.id}`, {
