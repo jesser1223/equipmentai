@@ -4,6 +4,8 @@ import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { geocodeAddress } from "@/lib/geocode";
 
+export const maxDuration = 30;
+
 export async function GET() {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
@@ -26,15 +28,18 @@ export async function GET() {
 
     let lat = job.latitude;
     let lng = job.longitude;
-    if (lat == null || lng == null) {
+    const hasStreetNumber = /\d/.test(address);
+    const needsLookup = lat == null || lng == null || hasStreetNumber;
+    if (needsLookup) {
       const point = await geocodeAddress(address);
-      if (!point) {
+      if (point) {
+        lat = point.lat;
+        lng = point.lng;
+        await prisma.job.update({ where: { id: job.id }, data: { latitude: lat, longitude: lng } });
+      } else if (lat == null || lng == null) {
         unresolved.push(address);
         continue;
       }
-      lat = point.lat;
-      lng = point.lng;
-      await prisma.job.update({ where: { id: job.id }, data: { latitude: lat, longitude: lng } });
     }
 
     markers.push({

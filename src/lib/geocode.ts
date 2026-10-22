@@ -1,5 +1,26 @@
-async function searchNominatim(query: string): Promise<{ lat: number; lng: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+type Point = { lat: number; lng: number };
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+function scoreHit(hit: any, street: string): number {
+  const type = `${hit?.addresstype || ""} ${hit?.type || ""} ${hit?.class || ""}`.toLowerCase();
+  const name = `${hit?.display_name || ""}`.toLowerCase();
+  const number = street.match(/\d+/)?.[0];
+  let score = 0;
+  if (type.includes("house") || type.includes("building") || type.includes("address")) score += 5;
+  if (type.includes("road") || type.includes("street") || type.includes("highway")) score += 3;
+  if (number && name.includes(number)) score += 4;
+  if (type.includes("city") || type.includes("town") || type.includes("administrative")) score -= 3;
+  return score;
+}
+
+async function nominatim(params: URLSearchParams): Promise<Point | null> {
+  const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
   const res = await fetch(url, {
     cache: "no-store",
     headers: {
@@ -9,34 +30,40 @@ async function searchNominatim(query: string): Promise<{ lat: number; lng: numbe
   });
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
-  const hit = Array.isArray(data) ? data[0] : null;
-  if (!hit?.lat || !hit?.lon) return null;
-  return { lat: Number(hit.lat), lng: Number(hit.lon) };
+  if (!Array.isArray(data) || !data.length) return null;
+  const street = params.get("street") || params.get("q") || "";
+  const best = [...data].sort((a, b) => scoreHit(b, street) - scoreHit(a, street))[0];
+  if (!best?.lat || !best?.lon) return null;
+  return { lat: Number(best.lat), lng: Number(best.lon) };
 }
 
-async function searchPhoton(query: string): Promise<{ lat: number; lng: number } | null> {
-  const url = `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { cache: "no-store", headers: { Accept: "application/json" } });
-  if (!res.ok) return null;
-  const data = await res.json().catch(() => null);
-  const coords = data?.features?.[0]?.geometry?.coordinates;
-  if (!Array.isArray(coords) || coords.length < 2) return null;
-  return { lat: Number(coords[1]), lng: Number(coords[0]) };
-}
+export async function geocodeAddress(address: string): Promise<Point | null> {
+  const parts = address.split(",").map((part) => part.trim()).filter(Boolean);
+  const street = parts[0] || address;
+  const city = parts[1] || "";
+  const province = parts[2] || "";
+  const postal = parts[3] || "";
+  const country = parts[4] || "Canada";
 
-export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  const query = address.trim();
-  if (!query) return null;
+  const structured = new URLSearchParams({
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "5",
+    street,
+    country,
+  });
+  if (city) structured.set("city", city);
+  if (province) structured.set("state", province);
+  if (postal) structured.set("postalcode", postal);
 
-  const attempts = [query];
-  if (!/canada|usa|united states/i.test(query)) attempts.push(`${query}, Canada`);
-  if (!/vancouver/i.test(query)) attempts.push(`${query}, Vancouver, BC, Canada`);
+  const structuredHit = await withTimeout(nominatim(structured), 4000);
+  if (structuredHit) return structuredHit;
 
-  for (const attempt of attempts) {
-    const photon = await searchPhoton(attempt);
-    if (photon) return photon;
-    const nominatim = await searchNominatim(attempt);
-    if (nominatim) return nominatim;
-  }
-  return null;
+  const free = new URLSearchParams({
+    format: "jsonv2",
+    addressdetails: "1",
+    limit: "5",
+    q: [street, city, province, postal, country].filter(Boolean).join(", "),
+  });
+  return withTimeout(nominatim(free), 4000);
 }

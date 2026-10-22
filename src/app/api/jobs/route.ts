@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
-import { geocodeAddress } from "@/lib/geocode";
 
 export async function GET() {
   const session = await auth();
@@ -47,7 +46,6 @@ export async function POST(req: Request) {
   }
 
   const location = body.location?.trim() || null;
-  const point = location ? await geocodeAddress(location) : null;
 
   const job = await prisma.job.create({
     data: {
@@ -58,8 +56,6 @@ export async function POST(req: Request) {
       startDate: start,
       endDate: end,
       location,
-      latitude: point?.lat ?? null,
-      longitude: point?.lng ?? null,
       notes: body.notes,
       status: "Scheduled",
     },
