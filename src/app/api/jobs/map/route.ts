@@ -4,7 +4,6 @@ import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { geocodeAddress } from "@/lib/geocode";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function GET() {
