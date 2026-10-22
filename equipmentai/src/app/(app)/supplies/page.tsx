@@ -140,9 +140,13 @@ export default function SuppliesPage() {
                   <td className="px-4 py-3">{s.markupPercent}%</td>
                   <td className="px-4 py-3">${s.customerPrice.toFixed(2)}</td>
                   <td className="px-4 py-3">{s.active ? "Active" : "Inactive"}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => openEdit(s)} className="text-muted-foreground hover:text-accent"><Pencil className="h-4 w-4" /></button>
-                    {s.active && <button onClick={() => deactivate(s)} className="text-danger hover:opacity-80"><Trash2 className="h-4 w-4" /></button>}
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => openEdit(s)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
+                        <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
+                      </button>
+                      {s.active && <button onClick={() => deactivate(s)} className="text-danger hover:opacity-80"><Trash2 className="h-4 w-4" /></button>}
+                    </div>
                   </td>
                 </tr>
               ))}

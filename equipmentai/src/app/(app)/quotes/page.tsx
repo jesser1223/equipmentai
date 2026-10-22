@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -73,15 +73,17 @@ export default function QuotesPage() {
                   <td className="px-4 py-3">{q.jobName}</td>
                   <td className="px-4 py-3">{q.status}</td>
                   <td className="px-4 py-3">${q.total.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    {!q.job && (
-                      <button onClick={() => setEditTarget(q)} className="text-xs text-accent hover:underline">
-                        Edit
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {!q.job && (
+                        <button onClick={() => setEditTarget(q)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
+                          <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
+                        </button>
+                      )}
+                      <button onClick={() => setToDelete(q)} className="text-muted-foreground hover:text-danger">
+                        <Trash2 className="h-4 w-4" />
                       </button>
-                    )}
-                    <button onClick={() => setToDelete(q)} className="text-muted-foreground hover:text-danger">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    </div>
                   </td>
                 </tr>
               ))}

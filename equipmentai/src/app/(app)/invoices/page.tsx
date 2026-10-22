@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 
@@ -395,9 +395,9 @@ export default function InvoicesPage() {
                           setEditDue(inv.dueDate ? String(inv.dueDate).slice(0, 10) : "");
                           setEditError("");
                         }}
-                        className="text-xs text-accent hover:underline"
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
                       >
-                        Edit
+                        <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                       </button>
                     )}
                     {inv.status !== "Paid" && inv.status !== "Void" && (
