@@ -28,16 +28,24 @@ export async function POST(req: Request) {
   if (!orgId) return NextResponse.json({ error: "No organization" }, { status: 400 });
 
   const body = await req.json();
-  const customer = await prisma.customer.create({
-    data: {
-      name: body.name,
-      email: body.email || null,
-      phone: body.phone || null,
-      company: body.company || null,
-      address: body.address || null,
-      notes: body.notes || null,
-      organizationId: orgId,
-    },
-  });
-  return NextResponse.json(customer, { status: 201 });
+  const name = String(body.name || "").trim();
+  if (!name) return NextResponse.json({ error: "Customer name is required." }, { status: 400 });
+
+  try {
+    const customer = await prisma.customer.create({
+      data: {
+        name,
+        email: body.email || null,
+        phone: body.phone || null,
+        company: body.company || null,
+        address: body.address || null,
+        notes: body.notes || null,
+        organization: { connect: { id: orgId } },
+      },
+    });
+    return NextResponse.json(customer, { status: 201 });
+  } catch (err) {
+    console.error("[customers] create failed", err);
+    return NextResponse.json({ error: "Could not add customer." }, { status: 500 });
+  }
 }
