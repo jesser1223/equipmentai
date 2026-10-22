@@ -9,7 +9,6 @@ type Marker = {
   label: string;
   address: string;
   matched?: string;
-  approximate?: boolean;
   customer: string;
   status: string;
 };
@@ -94,7 +93,7 @@ export function MapPreview() {
             `<strong>${marker.label}</strong>`,
             marker.customer,
             marker.address,
-            marker.matched ? `${marker.approximate ? "Approximate: " : ""}${marker.matched}` : "",
+            marker.matched,
             marker.status,
           ].filter(Boolean).join("<br>");
           L.marker([marker.lat, marker.lng], { icon }).addTo(map).bindPopup(popup);
@@ -118,8 +117,6 @@ export function MapPreview() {
     };
   }, [loading, markers]);
 
-  const approximate = markers.some((marker) => marker.approximate);
-
   return (
     <div className="relative h-[480px] overflow-hidden rounded-xl border border-border bg-card">
       <div ref={mapRef} className="h-full w-full" />
@@ -129,10 +126,9 @@ export function MapPreview() {
       {mapError && (
         <div className="absolute inset-0 flex items-center justify-center bg-card px-6 text-center text-sm text-muted-foreground">{mapError}</div>
       )}
-      {(unresolved.length > 0 || approximate) && (
+      {(unresolved.length > 0) && (
         <div className="absolute left-3 top-3 z-[500] max-w-sm rounded-md bg-black/75 px-3 py-2 text-[11px] text-white/90 backdrop-blur-sm">
-          {unresolved.length > 0 && <div>Could not locate: {unresolved.join("; ")}</div>}
-          {approximate && <div>Approximate pin: exact house number is not in the map data.</div>}
+          Could not locate: {unresolved.join("; ")}
         </div>
       )}
       <div className="pointer-events-none absolute bottom-3 right-3 z-[500] rounded-md bg-black/70 px-2 py-1 text-[10px] text-white/80 backdrop-blur-sm">

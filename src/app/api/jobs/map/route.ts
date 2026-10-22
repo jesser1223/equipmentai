@@ -48,7 +48,6 @@ export async function GET() {
         label: job.title,
         address,
         matched: point.matched,
-        approximate: point.approximate,
         customer: job.customer?.name || "",
         status: job.status,
       });
