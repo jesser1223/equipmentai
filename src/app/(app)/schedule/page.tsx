@@ -18,8 +18,6 @@ export default function SchedulePage() {
     startDate: "",
     endDate: "",
     location: "",
-    latitude: "",
-    longitude: "",
     notes: "",
     status: "Scheduled",
   };
@@ -57,8 +55,6 @@ export default function SchedulePage() {
       startDate: toDateInput(job.startDate),
       endDate: toDateInput(job.endDate),
       location: job.location || "",
-      latitude: job.latitude ?? "",
-      longitude: job.longitude ?? "",
       notes: job.notes || "",
       status: job.status || "Scheduled",
     });
@@ -92,11 +88,7 @@ export default function SchedulePage() {
     const res = await fetch(editingId ? `/api/jobs/${editingId}` : "/api/jobs", {
       method: editingId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        latitude: form.latitude ? Number(form.latitude) : null,
-        longitude: form.longitude ? Number(form.longitude) : null,
-      }),
+      body: JSON.stringify(form),
     });
     setSaving(false);
     if (!res.ok) {
@@ -207,17 +199,8 @@ export default function SchedulePage() {
             <h3 className="text-sm font-semibold">Job Location</h3>
             <p className="text-[11px] text-muted-foreground">Job-site address (not the billing address or equipment location).</p>
             <label className="text-xs text-muted-foreground">Job-site Address</label>
-            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">Latitude (optional)</label>
-                <input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Longitude (optional)</label>
-                <input type="number" step="any" value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-              </div>
-            </div>
+            <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="123 Main St, Vancouver, BC" className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            <p className="text-[11px] text-muted-foreground">Used to place the job on the map. No latitude or longitude needed.</p>
           </section>
 
           <section className="space-y-2">

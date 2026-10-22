@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
+import { geocodeAddress } from "@/lib/geocode";
 
 const STATUSES = ["Scheduled", "In Progress", "Completed"];
 
@@ -65,6 +66,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
+  const location = body.location?.trim() || null;
+  const addressChanged = location !== (result.job.location || null);
+  const point = location && addressChanged ? await geocodeAddress(location) : null;
+
   const updated = await prisma.job.update({
     where: { id },
     data: {
@@ -74,9 +79,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       status,
       startDate: start,
       endDate: end,
-      location: body.location || null,
-      latitude: body.latitude != null && body.latitude !== "" ? Number(body.latitude) : null,
-      longitude: body.longitude != null && body.longitude !== "" ? Number(body.longitude) : null,
+      location,
+      latitude: location ? (point?.lat ?? result.job.latitude) : null,
+      longitude: location ? (point?.lng ?? result.job.longitude) : null,
       notes: body.notes || null,
     },
     include: { customer: true, equipment: true },
