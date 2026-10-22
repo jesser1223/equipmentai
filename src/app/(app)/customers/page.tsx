@@ -51,6 +51,18 @@ export default function CustomersPage() {
     load();
   };
 
+  const linked = toDelete?._count || { quotes: 0, jobs: 0, invoices: 0 };
+  const attached = [
+    linked.quotes ? `${linked.quotes} quote${linked.quotes === 1 ? "" : "s"}` : "",
+    linked.jobs ? `${linked.jobs} job${linked.jobs === 1 ? "" : "s"}` : "",
+    linked.invoices ? `${linked.invoices} invoice${linked.invoices === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  const description = !toDelete
+    ? ""
+    : attached.length
+      ? `Are you sure you want to delete “${toDelete.name}”? This will also permanently delete the ${attached.join(", ")} attached to this customer. This cannot be undone.`
+      : `Are you sure you want to permanently delete “${toDelete.name}”? This cannot be undone.`;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Customers</h1>
@@ -90,7 +102,7 @@ export default function CustomersPage() {
         onClose={() => !deleting && setToDelete(null)}
         onConfirm={remove}
         title="Delete customer?"
-        description={toDelete ? `Permanently delete “${toDelete.name}”? This cannot be undone if the customer has no linked jobs, quotes, or invoices.` : ""}
+        description={description}
         confirmLabel="Delete Customer"
         loading={deleting}
         error={error}

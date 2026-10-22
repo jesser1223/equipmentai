@@ -19,9 +19,14 @@ export default function LoginPage() {
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: true,
-      callbackUrl: "/",
+      redirect: false,
     });
+    setLoading(false);
+    if (res?.error) {
+      setError("Invalid email or password");
+    } else {
+      window.location.href = "/";
+    }
   };
 
   return (

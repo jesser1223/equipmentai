@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Customer = { id: string; name: string };
 type Equipment = { id: string; name: string; unitNumber: string; hourlyRate: number };
@@ -15,9 +14,6 @@ export default function QuotesPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState("");
-  const [toDelete, setToDelete] = useState<any>(null);
-  const [editTarget, setEditTarget] = useState<any>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [q, c, e] = await Promise.all([
@@ -73,18 +69,6 @@ export default function QuotesPage() {
                   <td className="px-4 py-3">{q.jobName}</td>
                   <td className="px-4 py-3">{q.status}</td>
                   <td className="px-4 py-3">${q.total.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {!q.job && (
-                        <button onClick={() => setEditTarget(q)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
-                          <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
-                        </button>
-                      )}
-                      <button onClick={() => setToDelete(q)} className="text-muted-foreground hover:text-danger">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -92,21 +76,6 @@ export default function QuotesPage() {
         )}
       </div>
 
-      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title={`Edit ${editTarget?.number || "quote"}`}>
-        {editTarget && (
-          <QuoteForm
-            customers={customers}
-            equipment={equipment}
-            initial={editTarget}
-            onSaved={() => {
-              setEditTarget(null);
-              setToast("Quote updated");
-              setTimeout(() => setToast(""), 2500);
-              load();
-            }}
-          />
-        )}
-      </Modal>
       <Modal open={open} onClose={() => setOpen(false)} title="Create Quote">
         <QuoteForm
           customers={customers}
@@ -119,29 +88,6 @@ export default function QuotesPage() {
           }}
         />
       </Modal>
-
-      <ConfirmDialog
-        open={!!toDelete}
-        title="Delete quote?"
-        description={`Permanently delete quote ${toDelete?.number}? This cannot be undone.`}
-        confirmLabel="Delete Quote"
-        loading={deleting}
-        onClose={() => setToDelete(null)}
-        onConfirm={async () => {
-          if (!toDelete) return;
-          setDeleting(true);
-          const res = await fetch(`/api/quotes/${toDelete.id}`, { method: "DELETE" });
-          setDeleting(false);
-          if (res.ok) {
-            setToDelete(null);
-            load();
-          } else {
-            const data = await res.json();
-            alert(data.error || "Could not delete");
-            setToDelete(null);
-          }
-        }}
-      />
     </div>
   );
 }
@@ -150,29 +96,19 @@ function QuoteForm({
   customers,
   equipment,
   onSaved,
-  initial,
 }: {
   customers: Customer[];
   equipment: Equipment[];
   onSaved: () => void;
-  initial?: any;
 }) {
-  const [customerId, setCustomerId] = useState(initial?.customerId || customers[0]?.id || "");
-  const [jobName, setJobName] = useState(initial?.jobName || "");
-  const [location, setLocation] = useState(initial?.location || "");
-  const [notes, setNotes] = useState(initial?.notes || "");
-  const [lines, setLines] = useState<Line[]>(
-    initial?.lines?.length
-      ? initial.lines.map((l: any) => ({
-          equipmentId: l.equipmentId || "",
-          description: l.description || "",
-          quantity: l.quantity || 1,
-          rate: l.rate || 0,
-          amount: l.amount || 0,
-        }))
-      : [{ equipmentId: "", description: "", quantity: 1, rate: 0, amount: 0 }]
-  );
-  const [taxRate, setTaxRate] = useState(initial?.taxRate || 0);
+  const [customerId, setCustomerId] = useState(customers[0]?.id || "");
+  const [jobName, setJobName] = useState("");
+  const [location, setLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<Line[]>([
+    { equipmentId: "", description: "", quantity: 1, rate: 0, amount: 0 },
+  ]);
+  const [taxRate, setTaxRate] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -206,8 +142,8 @@ function QuoteForm({
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(initial ? `/api/quotes/${initial.id}` : "/api/quotes", {
-        method: initial ? "PATCH" : "POST",
+      const res = await fetch("/api/quotes", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId,
@@ -218,10 +154,7 @@ function QuoteForm({
           lines: lines.filter((l) => l.description),
         }),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Save failed");
-      }
+      if (!res.ok) throw new Error("Save failed");
       onSaved();
     } catch (err: any) {
       setError(err.message);
@@ -283,7 +216,7 @@ function QuoteForm({
               placeholder="Rate"
             />
             <div className="col-span-3 text-sm">${line.amount.toFixed(2)}</div>
-            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-muted-foreground hover:text-danger">
+            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-danger">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -313,7 +246,7 @@ function QuoteForm({
 
       <div className="flex justify-end">
         <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50">
-          {saving ? "Saving…" : initial ? "Save changes" : "Save Quote"}
+          {saving ? "Saving…" : "Save Quote"}
         </button>
       </div>
     </form>

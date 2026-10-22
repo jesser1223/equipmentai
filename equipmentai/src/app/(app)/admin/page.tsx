@@ -82,7 +82,7 @@ export default function AdminPage() {
         {loading ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
         ) : (
-          <table className="w-full min-w-[700px] text-sm">
+          <table className="w-full text-sm">
             <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Company</th>

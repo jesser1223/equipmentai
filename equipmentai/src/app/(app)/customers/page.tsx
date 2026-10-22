@@ -76,7 +76,7 @@ export default function CustomersPage() {
             {customers.map((c) => (
               <li key={c.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <span>{c.name}</span>
-                <button onClick={() => { setError(""); setToDelete(c); }} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${c.name}`}>
+                <button onClick={() => { setError(""); setToDelete(c); }} className="text-danger hover:opacity-80" aria-label={`Delete ${c.name}`}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </li>

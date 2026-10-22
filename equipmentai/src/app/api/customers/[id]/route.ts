@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;

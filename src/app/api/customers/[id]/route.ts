@@ -15,18 +15,29 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   if (!customer) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const [quotes, jobs, invoices] = await Promise.all([
-    prisma.quote.count({ where: { customerId: id } }),
-    prisma.job.count({ where: { customerId: id } }),
-    prisma.invoice.count({ where: { customerId: id } }),
+    prisma.quote.findMany({ where: { customerId: id, organizationId: orgId }, select: { id: true } }),
+    prisma.job.findMany({ where: { customerId: id, organizationId: orgId }, select: { id: true } }),
+    prisma.invoice.findMany({ where: { customerId: id, organizationId: orgId }, select: { id: true } }),
   ]);
 
-  if (quotes > 0 || jobs > 0 || invoices > 0) {
-    return NextResponse.json(
-      { error: `Cannot delete: linked to ${quotes} quote(s), ${jobs} job(s), and ${invoices} invoice(s). Remove those first or archive instead.` },
-      { status: 409 }
-    );
-  }
+  await prisma.$transaction(async (tx) => {
+    const invoiceIds = invoices.map((invoice) => invoice.id);
+    if (invoiceIds.length) {
+      await tx.invoice.deleteMany({ where: { id: { in: invoiceIds }, organizationId: orgId } });
+    }
+    const jobIds = jobs.map((job) => job.id);
+    if (jobIds.length) {
+      await tx.job.deleteMany({ where: { id: { in: jobIds }, organizationId: orgId } });
+    }
+    const quoteIds = quotes.map((quote) => quote.id);
+    if (quoteIds.length) {
+      await tx.quote.deleteMany({ where: { id: { in: quoteIds }, organizationId: orgId } });
+    }
+    await tx.customer.delete({ where: { id } });
+  });
 
-  await prisma.customer.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    deleted: { quotes: quotes.length, jobs: jobs.length, invoices: invoices.length },
+  });
 }

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push",
@@ -20,9 +20,7 @@
     "react-leaflet": "^5.0.0",
     "@prisma/client": "^5.22.0",
     "next-auth": "^5.0.0-beta.25",
-    "bcryptjs": "^2.4.3",
-    "resend": "^4.0.0",
-    "pdf-lib": "^1.17.1"
+    "bcryptjs": "^2.4.3"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

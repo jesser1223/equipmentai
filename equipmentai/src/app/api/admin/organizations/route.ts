@@ -1,13 +1,14 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isConfiguredOwner } from "@/lib/owner";
 
 async function requireOwner() {
   const session = await auth();
-  if (!session) return null;
-  const userId = (session.user as any)?.id;
-  if (!isConfiguredOwner(userId)) return null;
+  const ownerId = process.env.OWNER_USER_ID;
+  const userId = (session?.user as any)?.id;
+  if (!session || !ownerId || userId !== ownerId) {
+    return null;
+  }
   return session;
 }
 

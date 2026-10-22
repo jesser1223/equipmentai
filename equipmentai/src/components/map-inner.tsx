@@ -1,10 +1,10 @@
-// @ts-nocheck
 "use client";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
+// Fix default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -16,7 +16,7 @@ export default function MapInner({ locations }: { locations: { lat: number; lng:
   return (
     <MapContainer center={[39, -98]} zoom={4} style={{ height: "100%", width: "100%" }}>
       <TileLayer
-        attribution="&copy; OpenStreetMap contributors"
+        attribution='&copy; OpenStreetMap contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {locations.map((loc, i) => (

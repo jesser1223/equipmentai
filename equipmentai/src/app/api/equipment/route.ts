@@ -1,18 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const equipment = await prisma.equipment.findMany({
     where: { organizationId: orgId },
-    include: { attachments: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(equipment);
@@ -21,8 +17,6 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
   if (!orgId) {
     return NextResponse.json({ error: "No organization associated with this account." }, { status: 400 });
   }
@@ -54,30 +48,7 @@ export async function POST(req: Request) {
         organizationId: orgId,
       },
     });
-
-    if (Array.isArray(body.attachments)) {
-      await prisma.attachment.createMany({
-        data: body.attachments
-          .filter((a: any) => a.name)
-          .map((a: any) => ({
-            name: a.name,
-            manufacturer: a.manufacturer || null,
-            model: a.model || null,
-            serialNumber: a.serialNumber || null,
-            billingMethod: a.billingMethod || "hourly",
-            rate: Number(a.rate) || 0,
-            notes: a.notes || null,
-            equipmentId: equipment.id,
-            organizationId: orgId,
-          })),
-      });
-    }
-
-    const full = await prisma.equipment.findUnique({
-      where: { id: equipment.id },
-      include: { attachments: true },
-    });
-    return NextResponse.json(full, { status: 201 });
+    return NextResponse.json(equipment, { status: 201 });
   } catch (e: any) {
     console.error(e);
     return NextResponse.json({ error: "Failed to create equipment. Check that the unit number is unique." }, { status: 400 });

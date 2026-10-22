@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const session = await auth();
-  const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
-  if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const quotes = await prisma.quote.findMany({
-    where: { organizationId: orgId },
     include: { customer: true, lines: true },
     orderBy: { createdAt: "desc" },
   });
@@ -19,15 +10,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  const orgId = (session?.user as any)?.organizationId;
-  const blocked = blockedOrganizationResponse(session);
-  if (blocked) return blocked;
-  if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   try {
     const body = await req.json();
-    const count = await prisma.quote.count({ where: { organizationId: orgId } });
+    const count = await prisma.quote.count();
     const number = `Q-${String(count + 1).padStart(4, "0")}`;
 
     const lines = body.lines || [];
@@ -48,7 +33,6 @@ export async function POST(req: Request) {
         taxRate,
         taxAmount,
         total,
-        organizationId: orgId,
         customerId: body.customerId,
         lines: {
           create: lines.map((l: any) => ({
@@ -57,14 +41,15 @@ export async function POST(req: Request) {
             unit: l.unit || "hours",
             rate: Number(l.rate) || 0,
             amount: Number(l.amount) || 0,
+            equipmentId: l.equipmentId || null,
           })),
         },
       },
       include: { lines: true, customer: true },
     });
+
     return NextResponse.json(quote, { status: 201 });
   } catch (e: any) {
-    console.error(e);
-    return NextResponse.json({ error: "Failed to create quote" }, { status: 400 });
+    return NextResponse.json({ error: e.message || "Failed to create quote" }, { status: 400 });
   }
 }

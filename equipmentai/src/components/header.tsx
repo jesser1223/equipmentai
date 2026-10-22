@@ -15,10 +15,10 @@ export function Header({ title = "Dashboard" }: { title?: string }) {
     .toUpperCase();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-card/50 px-4 backdrop-blur-sm md:px-6">
-      <div className="pl-10 md:pl-0">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-card/50 px-6 backdrop-blur-sm">
+      <div>
         <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-        <p className="hidden text-xs text-muted-foreground sm:block">
+        <p className="text-xs text-muted-foreground">
           {user?.organizationName ? user.organizationName : "Overview of equipment and jobs"}
         </p>
       </div>

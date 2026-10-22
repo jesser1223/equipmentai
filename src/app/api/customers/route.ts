@@ -12,6 +12,9 @@ export async function GET() {
 
   const customers = await prisma.customer.findMany({
     where: { organizationId: orgId },
+    include: {
+      _count: { select: { quotes: true, jobs: true, invoices: true } },
+    },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(customers);

@@ -1,22 +1,21 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isConfiguredOwner } from "@/lib/owner";
 
 async function requireOwner() {
   const session = await auth();
-  if (!session) return null;
-  const userId = (session.user as any)?.id;
-  if (!isConfiguredOwner(userId)) return null;
+  const ownerId = process.env.OWNER_USER_ID;
+  const userId = (session?.user as any)?.id;
+  if (!session || !ownerId || userId !== ownerId) return null;
   return { session, userId };
 }
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   const authResult = await requireOwner();
   if (!authResult) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { action, reason } = await req.json();
-  const { id } = await params;
+  const id = params.id;
 
   const updates: any = {};
   if (action === "approve") {

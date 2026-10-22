@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Search, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { EquipmentForm } from "@/components/equipment-form";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -29,7 +29,6 @@ export default function EquipmentPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
   const [toast, setToast] = useState("");
 
   const [toDelete, setToDelete] = useState<Equipment | null>(null);
@@ -61,10 +60,8 @@ export default function EquipmentPage() {
   );
 
   const handleSave = async (data: any) => {
-    const url = editing ? `/api/equipment/${editing.id}` : "/api/equipment";
-    const method = editing ? "PATCH" : "POST";
-    const res = await fetch(url, {
-      method,
+    const res = await fetch("/api/equipment", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
@@ -73,8 +70,7 @@ export default function EquipmentPage() {
       throw new Error(err.error || "Save failed");
     }
     setModalOpen(false);
-    setEditing(null);
-    setToast(editing ? "Equipment updated" : "Equipment saved");
+    setToast("Equipment saved");
     setTimeout(() => setToast(""), 2500);
     load();
   };
@@ -164,28 +160,16 @@ export default function EquipmentPage() {
                     ${eq.hourlyRate}/hr · ${eq.dailyRate}/day
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setEditing(eq);
-                          setModalOpen(true);
-                        }}
-                        className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
-                        aria-label={`Edit ${eq.name}`}
-                      >
-                        <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          setDeleteError(null);
-                          setToDelete(eq);
-                        }}
-                        className="text-muted-foreground hover:text-danger"
-                        aria-label={`Delete ${eq.name}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        setDeleteError(null);
+                        setToDelete(eq);
+                      }}
+                      className="text-danger hover:opacity-80"
+                      aria-label={`Delete ${eq.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -194,29 +178,8 @@ export default function EquipmentPage() {
         )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? "Edit Equipment" : "Add Equipment"}>
-        <EquipmentForm
-          initial={editing ? {
-            ...editing,
-            year: editing.year?.toString() || "",
-            hourlyRate: editing.hourlyRate?.toString() || "",
-            dailyRate: editing.dailyRate?.toString() || "",
-            hourMeter: editing.hourMeter?.toString() || "",
-            latitude: editing.latitude?.toString() || "",
-            longitude: editing.longitude?.toString() || "",
-            attachments: (editing.attachments || []).map((a: any) => ({
-              name: a.name,
-              manufacturer: a.manufacturer || "",
-              model: a.model || "",
-              serialNumber: a.serialNumber || "",
-              billingMethod: a.billingMethod || "hourly",
-              rate: a.rate?.toString() || "0",
-              notes: a.notes || "",
-            })),
-          } : undefined}
-          onSave={handleSave}
-          onCancel={() => { setModalOpen(false); setEditing(null); }}
-        />
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Equipment">
+        <EquipmentForm onSave={handleSave} onCancel={() => setModalOpen(false)} />
       </Modal>
 
       <ConfirmDialog
