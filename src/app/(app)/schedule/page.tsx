@@ -404,16 +404,6 @@ export default function SchedulePage() {
           }
         }}
       />
-          setDeleting(false);
-          if (res.ok) {
-            setToDelete(null);
-            load();
-          } else {
-            const data = await res.json();
-            setDeleteError(data.error || "Could not delete");
-          }
-        }}
-      />
     </div>
   );
 }
