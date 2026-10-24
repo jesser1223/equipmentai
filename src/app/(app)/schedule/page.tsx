@@ -376,8 +376,14 @@ export default function SchedulePage() {
       <ConfirmDialog
         open={!!toDelete}
         title="Delete job?"
-        description={`Permanently delete "${toDelete?.title}"? This cannot be undone.`}
-        confirmLabel="Delete Job"
+        description={
+          toDelete
+            ? (toDelete.invoice || toDelete.status === "Completed"
+                ? `Are you sure? This will permanently delete “${toDelete.title}” and any related invoice. This cannot be undone.`
+                : `Permanently delete “${toDelete.title}”? This cannot be undone.`)
+            : ""
+        }
+        confirmLabel="Delete Everything"
         loading={deleting}
         error={deleteError}
         onClose={() => { if (!deleting) { setToDelete(null); setDeleteError(""); } }}
@@ -385,7 +391,19 @@ export default function SchedulePage() {
           if (!toDelete) return;
           setDeleting(true);
           setDeleteError("");
-          const res = await fetch(`/api/jobs/${toDelete.id}`, { method: "DELETE" });
+          const needsForce = toDelete.invoice || toDelete.status === "Completed";
+          const url = needsForce ? `/api/jobs/${toDelete.id}?force=true` : `/api/jobs/${toDelete.id}`;
+          const res = await fetch(url, { method: "DELETE" });
+          setDeleting(false);
+          if (res.ok) {
+            setToDelete(null);
+            load();
+          } else {
+            const data = await res.json();
+            setDeleteError(data.error || "Could not delete");
+          }
+        }}
+      />
           setDeleting(false);
           if (res.ok) {
             setToDelete(null);

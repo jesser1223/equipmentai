@@ -88,19 +88,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const result = await requireJob(id);
   if (result.error) return result.error;
   const { job } = result;
 
-  if (job.invoice) {
-    return NextResponse.json({ error: "Cannot delete a job that has an invoice. Void or remove the invoice first." }, { status: 409 });
+  const url = new URL(req.url);
+  const force = url.searchParams.get("force") === "true";
+
+  if (job.invoice && !force) {
+    return NextResponse.json({ error: "This job has an invoice. Confirm to permanently delete the job and its invoice.", requiresForce: true }, { status: 409 });
   }
-  if (job.status === "Completed") {
-    return NextResponse.json({ error: "Completed jobs cannot be deleted. They are part of your history." }, { status: 409 });
+  if (job.status === "Completed" && !force) {
+    return NextResponse.json({ error: "This job is completed. Confirm to permanently delete it and any related records.", requiresForce: true }, { status: 409 });
   }
 
-  await prisma.job.delete({ where: { id } });
+  if (force) {
+    await prisma.$transaction(async (tx) => {
+      if (job.invoice) {
+        await tx.payment.deleteMany({ where: { invoiceId: job.invoice.id } });
+        await tx.invoiceLine.deleteMany({ where: { invoiceId: job.invoice.id } });
+        await tx.invoice.delete({ where: { id: job.invoice.id } });
+      }
+      await tx.job.delete({ where: { id } });
+    });
+  } else {
+    await prisma.job.delete({ where: { id } });
+  }
+
   return NextResponse.json({ ok: true });
 }
