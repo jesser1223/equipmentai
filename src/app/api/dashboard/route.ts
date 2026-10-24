@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
+import { computeServiceStatus } from "@/lib/maintenance";
 
 export async function GET() {
   const session = await auth();
@@ -10,10 +11,27 @@ export async function GET() {
   if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const equipment = await prisma.equipment.findMany({
+    where: { organizationId: orgId },
+    include: {
+      maintenanceRecords: {
+        orderBy: { serviceDate: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  let overdueCount = 0;
+  let dueSoonCount = 0;
+  for (const eq of equipment) {
+    const status = computeServiceStatus(eq);
+    if (status === "Overdue") overdueCount++;
+    else if (status === "Due soon") dueSoonCount++;
+  }
+
   const [
     equipmentTotal,
     equipmentAvailable,
-    maintenanceAlerts,
     openQuotes,
     unpaidInvoices,
     jobsToday,
@@ -21,7 +39,6 @@ export async function GET() {
   ] = await Promise.all([
     prisma.equipment.count({ where: { organizationId: orgId } }),
     prisma.equipment.count({ where: { organizationId: orgId, status: "Available" } }),
-    prisma.equipment.count({ where: { organizationId: orgId, status: "Maintenance" } }),
     prisma.quote.count({ where: { organizationId: orgId, status: { in: ["Draft", "Sent"] } } }),
     prisma.invoice.count({ where: { organizationId: orgId, status: { notIn: ["Paid", "Void"] } } }),
     prisma.job.count({ where: { organizationId: orgId, status: { in: ["Scheduled", "In Progress"] } } }),
@@ -38,7 +55,9 @@ export async function GET() {
   return NextResponse.json({
     equipmentTotal,
     equipmentAvailable,
-    maintenanceAlerts,
+    maintenanceAlerts: overdueCount + dueSoonCount,
+    overdueCount,
+    dueSoonCount,
     openQuotes,
     unpaidInvoices,
     jobsToday,

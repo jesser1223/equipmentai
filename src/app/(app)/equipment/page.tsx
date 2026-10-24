@@ -15,6 +15,8 @@ type Equipment = {
   location: string | null;
   hourlyRate: number;
   dailyRate: number;
+  serviceStatus?: "Overdue" | "Due soon" | "Current" | "Not configured";
+  hourMeter?: number | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -22,6 +24,13 @@ const statusStyles: Record<string, string> = {
   "In Use": "bg-cyan-500/15 text-cyan-400",
   Maintenance: "bg-red-500/15 text-red-400",
   Inactive: "bg-slate-500/15 text-slate-400",
+};
+
+const serviceStyles: Record<string, string> = {
+  Overdue: "bg-red-500/15 text-red-400",
+  "Due soon": "bg-amber-500/15 text-amber-400",
+  Current: "bg-emerald-500/15 text-emerald-400",
+  "Not configured": "bg-slate-500/15 text-slate-400",
 };
 
 export default function EquipmentPage() {
@@ -143,6 +152,8 @@ export default function EquipmentPage() {
                 <th className="px-4 py-3">Unit #</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Service</th>
+                <th className="px-4 py-3">Hour Meter</th>
                 <th className="px-4 py-3">Location</th>
                 <th className="px-4 py-3">Rates</th>
                 <th className="px-4 py-3"></th>
@@ -159,6 +170,12 @@ export default function EquipmentPage() {
                       {eq.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${serviceStyles[eq.serviceStatus || "Not configured"] || ""}`}>
+                      {eq.serviceStatus || "Not configured"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{eq.hourMeter != null ? eq.hourMeter.toLocaleString() : "—"}</td>
                   <td className="px-4 py-3">{eq.location || "—"}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
                     ${eq.hourlyRate}/hr · ${eq.dailyRate}/day

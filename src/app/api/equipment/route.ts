@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
+import { computeServiceStatus } from "@/lib/maintenance";
 
 export async function GET() {
   const session = await auth();
@@ -12,10 +13,19 @@ export async function GET() {
 
   const equipment = await prisma.equipment.findMany({
     where: { organizationId: orgId },
-    include: { attachments: true },
+    include: {
+      attachments: true,
+      maintenanceRecords: { orderBy: { serviceDate: "desc" }, take: 1 },
+    },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json(equipment);
+
+  const withStatus = equipment.map((eq) => ({
+    ...eq,
+    serviceStatus: computeServiceStatus(eq),
+  }));
+
+  return NextResponse.json(withStatus);
 }
 
 export async function POST(req: Request) {

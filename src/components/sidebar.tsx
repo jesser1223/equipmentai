@@ -17,12 +17,14 @@ import {
   ShieldCheck,
   Menu,
   X,
+  ClipboardList,
 } from "lucide-react";
 
 const baseNav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/equipment", label: "Equipment", icon: Truck },
+  { href: "/maintenance", label: "Maintenance", icon: ClipboardList },
   { href: "/quotes", label: "Quotes", icon: Quote },
   { href: "/supplies", label: "Supplies", icon: Package },
   { href: "/customers", label: "Customers", icon: Users },
