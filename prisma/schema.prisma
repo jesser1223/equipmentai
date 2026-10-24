@@ -229,6 +229,13 @@ model Job {
   latitude    Float?
   longitude   Float?
   notes       String?
+  completedAt DateTime?
+  actualHours Float?
+  actualAttachmentHours Float?
+  drivingHours Float?
+  fuelLiters  Float?
+  fuelCost    Float?
+  completionNotes String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

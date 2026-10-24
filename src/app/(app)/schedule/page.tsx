@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, CheckCircle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -31,7 +31,17 @@ export default function SchedulePage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [toDelete, setToDelete] = useState<any>(null);
+  const [toComplete, setToComplete] = useState<any>(null);
+  const [completeForm, setCompleteForm] = useState({
+    actualHours: "",
+    actualAttachmentHours: "",
+    drivingHours: "",
+    fuelLiters: "",
+    fuelCost: "",
+    completionNotes: "",
+  });
+  const [completing, setCompleting] = useState(false);
+  const [completeError, setCompleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -127,7 +137,37 @@ export default function SchedulePage() {
     load();
   };
 
-  const filtered = jobs.filter((j) => filterStatus === "all" || j.status === filterStatus);
+  const handleComplete = async () => {
+    if (!toComplete) return;
+    setCompleting(true);
+    setCompleteError("");
+    try {
+      const res = await fetch(`/api/jobs/${toComplete.id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actualHours: completeForm.actualHours ? Number(completeForm.actualHours) : null,
+          actualAttachmentHours: completeForm.actualAttachmentHours ? Number(completeForm.actualAttachmentHours) : null,
+          drivingHours: completeForm.drivingHours ? Number(completeForm.drivingHours) : null,
+          fuelLiters: completeForm.fuelLiters ? Number(completeForm.fuelLiters) : null,
+          fuelCost: completeForm.fuelCost ? Number(completeForm.fuelCost) : null,
+          completionNotes: completeForm.completionNotes || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCompleteError(data.error || "Could not complete job");
+        return;
+      }
+      setToComplete(null);
+      setCompleteForm({ actualHours: "", actualAttachmentHours: "", drivingHours: "", fuelLiters: "", fuelCost: "", completionNotes: "" });
+      load();
+    } catch {
+      setCompleteError("Network error");
+    } finally {
+      setCompleting(false);
+    }
+  };
   const upcoming = jobs.filter((j) => j.status === "Scheduled").length;
   const active = jobs.filter((j) => j.status === "In Progress").length;
   const completed = jobs.filter((j) => j.status === "Completed").length;
@@ -179,6 +219,14 @@ export default function SchedulePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {j.status !== "Completed" && (
+                    <button
+                      onClick={() => { setCompleteError(""); setToComplete(j); }}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
+                    >
+                      <CheckCircle className="mr-1 inline h-3.5 w-3.5" /> Complete
+                    </button>
+                  )}
                   <button onClick={() => openEdit(j)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
                     <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                   </button>
@@ -282,6 +330,45 @@ export default function SchedulePage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!toComplete} onClose={() => setToComplete(null)} title="Complete Job">
+        <div className="space-y-4">
+          {completeError && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{completeError}</div>}
+          <p className="text-sm text-muted-foreground">Record actual usage. Leave blank if unknown. Hours will be added to the equipment hour meter.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Actual Hours</label>
+              <input type="number" step="0.1" value={completeForm.actualHours} onChange={(e) => setCompleteForm({ ...completeForm, actualHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Attachment Hours</label>
+              <input type="number" step="0.1" value={completeForm.actualAttachmentHours} onChange={(e) => setCompleteForm({ ...completeForm, actualAttachmentHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Driving Hours</label>
+              <input type="number" step="0.1" value={completeForm.drivingHours} onChange={(e) => setCompleteForm({ ...completeForm, drivingHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Fuel Liters</label>
+              <input type="number" step="0.1" value={completeForm.fuelLiters} onChange={(e) => setCompleteForm({ ...completeForm, fuelLiters: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Fuel Cost ($)</label>
+              <input type="number" step="0.01" value={completeForm.fuelCost} onChange={(e) => setCompleteForm({ ...completeForm, fuelCost: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Completion Notes</label>
+            <textarea value={completeForm.completionNotes} onChange={(e) => setCompleteForm({ ...completeForm, completionNotes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setToComplete(null)} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
+            <button type="button" onClick={handleComplete} disabled={completing} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
+              {completing ? "Saving…" : "Mark Completed"}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <ConfirmDialog

@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  BarChart3,
 } from "lucide-react";
 
 const baseNav = [
@@ -25,6 +26,7 @@ const baseNav = [
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/equipment", label: "Equipment", icon: Truck },
   { href: "/maintenance", label: "Maintenance", icon: ClipboardList },
+  { href: "/utilization", label: "Utilization", icon: BarChart3 },
   { href: "/quotes", label: "Quotes", icon: Quote },
   { href: "/supplies", label: "Supplies", icon: Package },
   { href: "/customers", label: "Customers", icon: Users },
