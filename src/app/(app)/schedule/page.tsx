@@ -42,6 +42,7 @@ export default function SchedulePage() {
   });
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState("");
+  const [toDelete, setToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -168,6 +169,7 @@ export default function SchedulePage() {
       setCompleting(false);
     }
   };
+  const filtered = jobs.filter((j) => filterStatus === "all" || j.status === filterStatus);
   const upcoming = jobs.filter((j) => j.status === "Scheduled").length;
   const active = jobs.filter((j) => j.status === "In Progress").length;
   const completed = jobs.filter((j) => j.status === "Completed").length;
