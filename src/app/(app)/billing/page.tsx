@@ -41,6 +41,11 @@ export default function BillingPage() {
       <div className="rounded-xl border border-border bg-card p-5 space-y-3">
         <div className="text-sm">Plan: <strong>$149 CAD / month</strong> (company)</div>
         <div className="text-sm">Status: <strong>{org?.subscriptionStatus || "No subscription"}</strong></div>
+        {org?.daysRemaining != null && (
+          <div className="text-sm">
+            <strong>{org.daysRemaining}</strong> day{org.daysRemaining === 1 ? "" : "s"} left {org.periodLabel}
+          </div>
+        )}
         {org?.trialEnd && <div className="text-sm">Trial ends: {new Date(org.trialEnd).toLocaleDateString()}</div>}
         {org?.currentPeriodEnd && <div className="text-sm">Current period ends: {new Date(org.currentPeriodEnd).toLocaleDateString()}</div>}
         {org?.graceUntil && <div className="text-sm text-amber-400">Grace period until: {new Date(org.graceUntil).toLocaleDateString()}</div>}

@@ -18,5 +18,26 @@ export async function GET() {
       stripeCustomerId: true,
     },
   });
-  return NextResponse.json(org || {});
+
+  if (!org) return NextResponse.json({});
+
+  const now = new Date();
+  let daysRemaining: number | null = null;
+  let periodLabel = "";
+
+  if (org.subscriptionStatus === "trialing" && org.trialEnd) {
+    const end = new Date(org.trialEnd);
+    daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    periodLabel = "trial";
+  } else if (org.currentPeriodEnd) {
+    const end = new Date(org.currentPeriodEnd);
+    daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    periodLabel = org.cancelAtPeriodEnd ? "until cancellation" : "in current period";
+  }
+
+  return NextResponse.json({
+    ...org,
+    daysRemaining,
+    periodLabel,
+  });
 }
