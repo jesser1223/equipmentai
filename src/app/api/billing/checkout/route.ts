@@ -45,9 +45,6 @@ export async function POST() {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { organizationId: org.id },
-      // Avoid Managed Payments tax-code requirement
-      // @ts-ignore
-      managed_payments: { enabled: false },
     });
 
     if (!checkout.url) {
