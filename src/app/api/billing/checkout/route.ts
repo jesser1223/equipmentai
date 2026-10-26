@@ -30,6 +30,10 @@ export async function POST() {
       await prisma.organization.update({ where: { id: org.id }, data: { stripeCustomerId: customerId } });
     }
 
+    const base = (process.env.NEXTAUTH_URL || "https://equipmentai-ppov.vercel.app").replace(/\/$/, "");
+    const successUrl = base.startsWith("http") ? `${base}/billing?success=1` : `https://${base}/billing?success=1`;
+    const cancelUrl = base.startsWith("http") ? `${base}/billing?canceled=1` : `https://${base}/billing?canceled=1`;
+
     const checkout = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
@@ -38,9 +42,12 @@ export async function POST() {
         trial_period_days: org.trialEnd ? undefined : 14,
         metadata: { organizationId: org.id },
       },
-      success_url: `${process.env.NEXTAUTH_URL}/billing?success=1`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/billing?canceled=1`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: { organizationId: org.id },
+      // Avoid Managed Payments tax-code requirement
+      // @ts-ignore
+      managed_payments: { enabled: false },
     });
 
     if (!checkout.url) {
