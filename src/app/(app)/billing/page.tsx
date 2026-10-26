@@ -18,10 +18,18 @@ export default function BillingPage() {
   }, []);
 
   const startCheckout = async () => {
-    const res = await fetch("/api/billing/checkout", { method: "POST" });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-    else setError(data.error || "Could not start checkout");
+    setError("");
+    try {
+      const res = await fetch("/api/billing/checkout", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setError(data.error || `Could not start checkout (${res.status})`);
+        return;
+      }
+      window.location.href = data.url;
+    } catch (e) {
+      setError("Network error starting checkout");
+    }
   };
 
   const openPortal = async () => {
