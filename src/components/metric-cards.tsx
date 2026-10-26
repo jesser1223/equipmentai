@@ -1,50 +1,60 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, Truck, AlertTriangle, Receipt } from "lucide-react";
+import Link from "next/link";
+import { Calendar, Truck, AlertTriangle, Receipt, MapPin, Clock } from "lucide-react";
 
 export function MetricCards() {
-  const [metrics, setMetrics] = useState({
-    equipmentAvailable: 0,
-    maintenanceAlerts: 0,
-    openQuotes: 0,
-    unpaidInvoices: 0,
-    jobsToday: 0,
-    outstandingBalance: 0,
-  });
+  const [metrics, setMetrics] = useState<any>({});
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
     fetch("/api/dashboard")
       .then((r) => r.json())
       .then(setMetrics)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 60000);
+    return () => clearInterval(id);
   }, []);
 
   const items = [
-    { label: "Equipment Available", value: metrics.equipmentAvailable, icon: Truck, change: "ready to assign" },
-    { label: "Maintenance Alerts", value: metrics.maintenanceAlerts, icon: AlertTriangle, change: "needs attention", accent: true },
-    { label: "Active Jobs", value: metrics.jobsToday, icon: Calendar, change: "scheduled" },
-    { label: "Unpaid Invoices", value: metrics.unpaidInvoices, icon: Receipt, change: `$${metrics.outstandingBalance.toFixed(0)} outstanding` },
+    { label: "Active Jobs", value: metrics.activeJobs ?? 0, href: "/schedule", icon: Calendar, sub: "scheduled or in progress" },
+    { label: "Today", value: metrics.jobsToday ?? 0, href: "/schedule", icon: Clock, sub: "jobs scheduled today" },
+    { label: "Need Equipment", value: metrics.unassignedJobs ?? 0, href: "/schedule", icon: MapPin, sub: "unassigned", accent: (metrics.unassignedJobs || 0) > 0 },
+    { label: "Available Equipment", value: metrics.equipmentAvailable ?? 0, href: "/equipment", icon: Truck, sub: "ready to assign" },
+    { label: "Maintenance", value: (metrics.overdueMaintenance || 0) + (metrics.dueSoonMaintenance || 0), href: "/equipment", icon: AlertTriangle, sub: `${metrics.overdueMaintenance || 0} overdue · ${metrics.dueSoonMaintenance || 0} soon`, accent: (metrics.overdueMaintenance || 0) > 0 },
+    { label: "Outstanding", value: `$${Number(metrics.outstandingBalance || 0).toFixed(0)}`, href: "/invoices", icon: Receipt, sub: `${metrics.unpaidInvoices || 0} unpaid invoices` },
   ];
 
+  if (loading) {
+    return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{items.map((m) => <div key={m.label} className="h-24 animate-pulse rounded-xl border border-border bg-card" />)}</div>;
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {items.map((m) => (
-        <div
+        <Link
           key={m.label}
-          className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-lg hover:shadow-black/20"
+          href={m.href}
+          className="rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-lg hover:shadow-black/20"
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{m.label}</p>
-              <p className="mt-2 text-3xl font-bold tracking-tight">{m.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{m.change}</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{m.label}</p>
+              <p className="mt-1 text-2xl font-bold tracking-tight">{m.value}</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{m.sub}</p>
             </div>
-            <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${m.accent ? "bg-danger/15 text-danger" : "bg-accent/15 text-accent"}`}>
-              <m.icon className="h-5 w-5" />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${m.accent ? "bg-danger/15 text-danger" : "bg-accent/15 text-accent"}`}>
+              <m.icon className="h-4 w-4" />
             </div>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

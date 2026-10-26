@@ -1,39 +1,33 @@
 ## Current Development Stage
-**Stage**: Job Completion, Actual Usage Tracking, and Equipment Utilization  
-**Date**: 2026-10-23  
-**Status**: Jobs can be completed with actual hours, attachment hours, driving hours, fuel, and notes. Completing a job with actual hours updates the equipment hour meter. Utilization report aggregates recorded actualHours from completed jobs. Financial summary shows invoice revenue and recorded fuel costs separately. Maintenance and invoice calculations are unchanged.
+**Stage**: Live Operations Dashboard + Named Job-Site Map Pins  
+**Date**: 2026-10-25  
+**Status**: Dashboard shows real metrics (active jobs, today, unassigned, available equipment, maintenance, outstanding balance). Map pins now display the job title as a permanent label above each marker. Today’s jobs, attention items, and recent activity (from actual records) are shown. No schema changes. Invoice and maintenance logic unchanged.
 
-## Features Completed and Tested
-- POST `/api/jobs/[id]/complete` records actuals and sets status to Completed (blocks duplicate completion)
-- Hour meter is increased by actualHours (validated, never decreased)
-- GET `/api/utilization` with optional date range (from recorded completed jobs only)
-- GET `/api/jobs/financial` (revenue from non-void invoices, fuel costs recorded separately)
-- Schedule page has Complete button and actuals form
-- New Utilization page in sidebar
+## Dashboard Metrics
+- **Active Jobs**: count of jobs with status Scheduled or In Progress
+- **Today**: jobs whose startDate or endDate falls on the current calendar day
+- **Need Equipment**: active jobs with no equipmentId
+- **Available Equipment**: equipment with status = "Available"
+- **Maintenance**: overdue + due-soon counts from existing service status logic
+- **Outstanding**: sum of (total - amountPaid) on non-Paid, non-Void invoices
 
-## Files Created or Changed
-- `prisma/schema.prisma` — added completedAt, actualHours, actualAttachmentHours, drivingHours, fuelLiters, fuelCost, completionNotes on Job
-- `src/app/api/jobs/[id]/complete/route.ts`
-- `src/app/api/utilization/route.ts`
-- `src/app/api/jobs/financial/route.ts`
-- `src/app/(app)/schedule/page.tsx` — Complete workflow
-- `src/app/(app)/utilization/page.tsx`
-- `src/components/sidebar.tsx` — Utilization link
+## Map
+- Uses existing Leaflet + OpenStreetMap (no new provider or API key)
+- Job title is rendered as a permanent DivIcon label above each pin
+- Long titles are truncated; full name is in the popup
+- Jobs without a resolvable location are listed as unresolved and are not placed with fabricated coordinates
+
+## Files Changed
+- `src/app/api/dashboard/route.ts`
+- `src/components/metric-cards.tsx`
+- `src/components/map-preview.tsx`
+- `src/components/dashboard-extras.tsx` (new)
+- `src/app/(app)/page.tsx`
 - `PROGRESS.md`
 
-## Known Bugs and Unfinished Work
-- Supplies and maintenance costs are not yet attributed to individual jobs (financial report notes this)
-- No per-job supply usage tracking
-- Utilization only counts jobs that have actualHours recorded
-
-## Next Steps
-- Run `npx prisma db push` for the new Job fields
-- Preview complete workflow, hour-meter update, and utilization page on Vercel
-- Optionally attribute supplies to jobs in a later batch
-
-## Important Commands
-```
-npx prisma db push
-npm run build
-```
- 
+## Manual Checks
+- Dashboard cards link to the correct pages
+- Map shows job names above pins
+- Today’s jobs and attention sections appear when data exists
+- Empty org shows empty states without errors
+- Refresh does not duplicate markers

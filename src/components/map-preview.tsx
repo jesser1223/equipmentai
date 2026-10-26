@@ -79,24 +79,27 @@ export function MapPreview() {
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "&copy; OpenStreetMap contributors",
         }).addTo(map);
-        const icon = L.icon({
-          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        });
         markers.forEach((marker) => {
+          const shortLabel = marker.label.length > 28 ? marker.label.slice(0, 26) + "…" : marker.label;
+          const icon = L.divIcon({
+            className: "job-pin-label",
+            html: `<div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;">
+              <div style="background:rgba(15,23,42,0.92);color:#fff;font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);white-space:nowrap;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.4);">${shortLabel}</div>
+              <div style="width:14px;height:14px;background:#14b8a6;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>
+            </div>`,
+            iconSize: [120, 36],
+            iconAnchor: [60, 36],
+          });
           const popup = [
             `<strong>${marker.label}</strong>`,
             marker.customer,
             marker.address,
-            marker.matched,
             marker.status,
           ].filter(Boolean).join("<br>");
-          L.marker([marker.lat, marker.lng], { icon }).addTo(map).bindPopup(popup);
+          const m = L.marker([marker.lat, marker.lng], { icon }).addTo(map).bindPopup(popup);
+          m.on("click", () => {
+            window.location.href = `/schedule`;
+          });
         });
         if (markers.length > 1) {
           map.fitBounds(markers.map((marker) => [marker.lat, marker.lng]), { padding: [40, 40] });
