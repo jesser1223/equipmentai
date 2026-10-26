@@ -32,6 +32,17 @@ model Organization {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  subscriptionStatus   String?  // trialing, active, past_due, canceled, unpaid, incomplete, incomplete_expired
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean  @default(false)
+  canceledAt           DateTime?
+  paymentFailedAt      DateTime?
+  graceUntil           DateTime?
+
   users          User[]
   equipment      Equipment[]
   attachments    Attachment[]
@@ -43,6 +54,7 @@ model Organization {
   auditLogs      AuditLog[]
   invoiceEmails  InvoiceEmail[]
   maintenanceRecords MaintenanceRecord[]
+  stripeEvents   StripeEvent[]
 }
 
 model AuditLog {
@@ -342,4 +354,13 @@ model Payment {
 
   invoiceId   String
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model StripeEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  type      String
+  processedAt DateTime @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }

@@ -10,6 +10,7 @@ import {
   Truck,
   Users,
   FileText,
+  Receipt,
   Settings,
   Wrench,
   Quote,
@@ -32,6 +33,7 @@ const baseNav = [
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/billing", label: "Billing", icon: Receipt },
 ];
 
 export function Sidebar() {
