@@ -4,8 +4,6 @@ import { stripe } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 
-export const runtime = "nodejs";
-
 export async function POST(req: Request) {
   const body = await req.text();
   const sig = (await headers()).get("stripe-signature");
