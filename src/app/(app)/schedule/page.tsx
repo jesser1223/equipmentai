@@ -9,6 +9,7 @@ export default function SchedulePage() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [equipment, setEquipment] = useState<any[]>([]);
+  const [taxRate, setTaxRate] = useState(0.05);
   const [showForm, setShowForm] = useState(false);
   const emptyForm = {
     title: "",
@@ -104,14 +105,16 @@ export default function SchedulePage() {
   };
 
   const load = async () => {
-    const [j, c, e] = await Promise.all([
+    const [j, c, e, s] = await Promise.all([
       fetch("/api/jobs").then((r) => r.json()),
       fetch("/api/customers").then((r) => r.json()),
       fetch("/api/equipment").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()).catch(() => ({})),
     ]);
     setJobs(Array.isArray(j) ? j : []);
     setCustomers(Array.isArray(c) ? c.filter((customer: any) => !customer.archivedAt) : []);
     setEquipment(Array.isArray(e) ? e : []);
+    if (s?.taxRate != null) setTaxRate(Number(s.taxRate));
   };
 
   useEffect(() => { load(); }, []);
@@ -482,13 +485,38 @@ export default function SchedulePage() {
             <textarea value={completeForm.completionNotes} onChange={(e) => setCompleteForm({ ...completeForm, completionNotes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} placeholder="Optional work details" />
           </div>
 
-          <div className="rounded-lg border border-border bg-background/50 p-3 text-xs">
-            <div className="font-medium mb-1">Summary</div>
-            <div>Equipment hours: {completeForm.actualHours || "—"}</div>
-            {completeForm.attachments.filter(a => a.used).map(a => (
-              <div key={a.id}>{a.name}: {a.hours || "0"} hrs {a.rate > 0 ? `($${a.rate}/hr)` : ""}</div>
-            ))}
-            {completeForm.fuelCost && <div>Fuel: ${completeForm.fuelCost}</div>}
+          <div className="rounded-lg border border-border bg-background/50 p-3 text-sm">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">Estimated charges</div>
+            {(() => {
+              const eq = equipment.find((e: any) => e.id === toComplete?.equipmentId);
+              const hours = Number(completeForm.actualHours) || 0;
+              const eqRate = eq?.hourlyRate || 0;
+              const eqCharge = hours > 0 && eqRate > 0 ? Math.round(hours * eqRate * 100) / 100 : 0;
+              const missing: string[] = [];
+              if (toComplete?.equipmentId && hours > 0 && eqRate <= 0) missing.push("equipment rate");
+              const attCharges = completeForm.attachments.filter(a => a.used).map(a => {
+                const h = Number(a.hours) || 0;
+                if (h > 0 && a.rate <= 0) missing.push(`${a.name} rate`);
+                return { name: a.name, amount: h > 0 && a.rate > 0 ? Math.round(h * a.rate * 100) / 100 : 0 };
+              });
+              const attTotal = attCharges.reduce((s, a) => s + a.amount, 0);
+              const fuel = Number(completeForm.fuelCost) || 0;
+              const subtotal = eqCharge + attTotal + fuel;
+              const gst = Math.round(subtotal * taxRate * 100) / 100;
+              const total = Math.round((subtotal + gst) * 100) / 100;
+              return (
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between"><span>Equipment</span><span>${eqCharge.toFixed(2)}</span></div>
+                  {attCharges.map(a => <div key={a.name} className="flex justify-between"><span>{a.name}</span><span>${a.amount.toFixed(2)}</span></div>)}
+                  {fuel > 0 && <div className="flex justify-between"><span>Fuel</span><span>${fuel.toFixed(2)}</span></div>}
+                  <div className="flex justify-between border-t border-border pt-1"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>GST ({(taxRate * 100).toFixed(0)}%)</span><span>${gst.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-semibold"><span>Estimated total</span><span>${total.toFixed(2)}</span></div>
+                  {missing.length > 0 && <div className="mt-1 text-amber-400">Missing: {missing.join(", ")}</div>}
+                  <div className="mt-1 text-[10px] text-muted-foreground">Estimate only. Invoice stays Draft until reviewed.</div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex justify-end gap-2">

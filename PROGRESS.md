@@ -1,15 +1,11 @@
 ## Current Development Stage
-**Stage**: Job Completion Form with Actual Hours and Attachments  
+**Stage**: Live Total Summary on Complete Job  
 **Date**: 2026-10-26  
-**Status**: Complete Job now opens a form that shows the assigned equipment, requires actual hours when equipment is assigned, lets the user select attachments and enter hours for each, records fuel cost and notes, and shows a summary before confirming. Attachment hours are summed into actualAttachmentHours and listed in completion notes. No schema changes.
+**Status**: Complete Job form now shows a live estimate that updates as hours, attachments, and fuel change. Uses equipment hourlyRate, attachment rate, and organization taxRate. Shows equipment, attachment, fuel, subtotal, GST, and estimated total. Flags missing rates. Invoice remains Draft. No schema changes.
 
-## How it works
-1. Click **Complete** on a scheduled job.
-2. Enter actual equipment hours (required if equipment is assigned).
-3. Check any attachments that were used and enter hours for each.
-4. Optionally enter driving hours, fuel cost, and notes.
-5. Review the summary and click **Confirm Completion**.
-
-## Files
-- `src/app/(app)/schedule/page.tsx`
-- `PROGRESS.md`
+## How to verify
+1. Open a job with equipment that has an hourly rate and click Complete.
+2. Enter hours — equipment charge updates.
+3. Check an attachment and enter hours — its charge appears.
+4. Enter fuel cost — it is added.
+5. Confirm GST and estimated total match the later invoice draft.
