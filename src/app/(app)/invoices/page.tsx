@@ -441,7 +441,7 @@ export default function InvoicesPage() {
                   <td className="px-4 py-3">{inv.status}</td>
                   <td className="px-4 py-3 text-right space-x-3">
                     <a
-                      href={`/invoices/${inv.id}/print`}
+                      href={`/print/invoice/${inv.id}`}
                       target="_blank"
                       className="text-xs text-accent hover:underline"
                     >
