@@ -18,7 +18,9 @@ export default function InvoicePrintPage({ params }: { params: Promise<{ id: str
         return;
       }
       setInvoice(data);
-      setTimeout(() => window.print(), 400);
+      setTimeout(() => {
+        window.print();
+      }, 400);
     })();
     return () => { cancelled = true; };
   }, [params]);
@@ -30,59 +32,61 @@ export default function InvoicePrintPage({ params }: { params: Promise<{ id: str
   const balance = Math.max(0, invoice.total - paid);
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", color: "#111", background: "#fff", padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 32 }}>
+    <div style={{ fontFamily: "system-ui, sans-serif", color: "#111", background: "#fff", padding: "32px 40px", maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #111", paddingBottom: 16, marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>{invoice.organization?.name}</div>
-          <div style={{ fontSize: 13, color: "#555" }}>{invoice.organization?.phone || ""}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{invoice.organization?.name}</div>
+          {invoice.organization?.phone && <div style={{ fontSize: 13, color: "#555", marginTop: 4 }}>{invoice.organization.phone}</div>}
+          {invoice.organization?.email && <div style={{ fontSize: 13, color: "#555" }}>{invoice.organization.email}</div>}
         </div>
-        <div style={{ textAlign: "right", fontSize: 13, color: "#444" }}>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>INVOICE</div>
-          <div>{invoice.number}</div>
-          <div>Issued: {new Date(invoice.issueDate).toLocaleDateString()}</div>
-          {invoice.dueDate && <div>Due: {new Date(invoice.dueDate).toLocaleDateString()}</div>}
-          <div>Status: {invoice.status}</div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: 1 }}>INVOICE</div>
+          <div style={{ fontSize: 14, marginTop: 4 }}>{invoice.number}</div>
+          <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>Issued: {new Date(invoice.issueDate).toLocaleDateString()}</div>
+          {invoice.dueDate && <div style={{ fontSize: 12, color: "#555" }}>Due: {new Date(invoice.dueDate).toLocaleDateString()}</div>}
         </div>
       </div>
 
       <div style={{ marginBottom: 24 }}>
-        <div style={{ fontWeight: 600 }}>Bill To</div>
-        <div>{invoice.customer?.name}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#777", textTransform: "uppercase", letterSpacing: 0.5 }}>Bill To</div>
+        <div style={{ marginTop: 4, fontWeight: 600 }}>{invoice.customer?.name}</div>
         {invoice.customer?.company && <div>{invoice.customer.company}</div>}
-        {invoice.customer?.address && <div>{invoice.customer.address}</div>}
-        {invoice.job && <div style={{ marginTop: 8 }}>Job: {invoice.job.title}</div>}
+        {invoice.customer?.address && <div style={{ color: "#444" }}>{invoice.customer.address}</div>}
+        {invoice.job && <div style={{ marginTop: 6, fontSize: 13 }}>Job: {invoice.job.title}{invoice.job.location ? ` — ${invoice.job.location}` : ""}</div>}
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
             {["Description", "Qty", "Unit", "Rate", "Amount"].map((h) => (
-              <th key={h} style={{ textAlign: "left", padding: 8, borderBottom: "1px solid #ddd", background: "#f5f5f5", fontSize: 13 }}>{h}</th>
+              <th key={h} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "2px solid #111", fontSize: 12, fontWeight: 600 }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {(invoice.lines || []).map((l: any) => (
             <tr key={l.id}>
-              <td style={{ padding: 8, borderBottom: "1px solid #ddd", fontSize: 13 }}>{l.description}</td>
-              <td style={{ padding: 8, borderBottom: "1px solid #ddd", fontSize: 13 }}>{l.quantity}</td>
-              <td style={{ padding: 8, borderBottom: "1px solid #ddd", fontSize: 13 }}>{l.unit}</td>
-              <td style={{ padding: 8, borderBottom: "1px solid #ddd", fontSize: 13 }}>${l.rate.toFixed(2)}</td>
-              <td style={{ padding: 8, borderBottom: "1px solid #ddd", fontSize: 13 }}>${l.amount.toFixed(2)}</td>
+              <td style={{ padding: "10px 8px", borderBottom: "1px solid #eee", fontSize: 13 }}>{l.description}</td>
+              <td style={{ padding: "10px 8px", borderBottom: "1px solid #eee", fontSize: 13 }}>{l.quantity}</td>
+              <td style={{ padding: "10px 8px", borderBottom: "1px solid #eee", fontSize: 13 }}>{l.unit}</td>
+              <td style={{ padding: "10px 8px", borderBottom: "1px solid #eee", fontSize: 13 }}>${l.rate.toFixed(2)}</td>
+              <td style={{ padding: "10px 8px", borderBottom: "1px solid #eee", fontSize: 13, textAlign: "right" }}>${l.amount.toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div style={{ marginTop: 16, textAlign: "right" }}>
-        <div>Subtotal: ${invoice.subtotal.toFixed(2)}</div>
-        <div>GST ({((invoice.taxRate || 0) * 100).toFixed(0)}%): ${invoice.taxAmount.toFixed(2)}</div>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>Total: ${invoice.total.toFixed(2)}</div>
-        <div>Paid: ${paid.toFixed(2)}</div>
-        <div>Balance: ${balance.toFixed(2)}</div>
+      <div style={{ marginTop: 16, marginLeft: "auto", width: 220, fontSize: 13 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}><span>Subtotal</span><span>${invoice.subtotal.toFixed(2)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}><span>GST ({((invoice.taxRate || 0) * 100).toFixed(0)}%)</span><span>${invoice.taxAmount.toFixed(2)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "2px solid #111", fontSize: 16, fontWeight: 700 }}><span>Total</span><span>${invoice.total.toFixed(2)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", color: "#555" }}><span>Paid</span><span>${paid.toFixed(2)}</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontWeight: 600 }}><span>Balance</span><span>${balance.toFixed(2)}</span></div>
       </div>
 
-      {invoice.notes && <div style={{ marginTop: 24, fontSize: 12, color: "#555" }}>{invoice.notes}</div>}
+      {invoice.organization?.invoiceFooter && (
+        <div style={{ marginTop: 32, fontSize: 11, color: "#777", borderTop: "1px solid #eee", paddingTop: 12 }}>{invoice.organization.invoiceFooter}</div>
+      )}
     </div>
   );
 }
