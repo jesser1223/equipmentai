@@ -25,6 +25,12 @@ export default function SchedulePage() {
     country: "Canada",
     notes: "",
     status: "Scheduled",
+    actualHours: "",
+    actualAttachmentHours: "",
+    drivingHours: "",
+    fuelLiters: "",
+    fuelCost: "",
+    completionNotes: "",
   };
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +45,7 @@ export default function SchedulePage() {
     fuelLiters: "",
     fuelCost: "",
     completionNotes: "",
+    attachments: [] as { id: string; name: string; rate: number; hours: string; used: boolean }[],
   });
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState("");
@@ -85,6 +92,12 @@ export default function SchedulePage() {
       ...splitAddress(job.location),
       notes: job.notes || "",
       status: job.status || "Scheduled",
+      actualHours: job.actualHours != null ? String(job.actualHours) : "",
+      actualAttachmentHours: job.actualAttachmentHours != null ? String(job.actualAttachmentHours) : "",
+      drivingHours: job.drivingHours != null ? String(job.drivingHours) : "",
+      fuelLiters: job.fuelLiters != null ? String(job.fuelLiters) : "",
+      fuelCost: job.fuelCost != null ? String(job.fuelCost) : "",
+      completionNotes: job.completionNotes || "",
     });
     setError("");
     setShowForm(true);
@@ -140,6 +153,16 @@ export default function SchedulePage() {
 
   const handleComplete = async () => {
     if (!toComplete) return;
+    const hours = Number(completeForm.actualHours);
+    if (toComplete.equipmentId && (!completeForm.actualHours || isNaN(hours) || hours < 0)) {
+      setCompleteError("Enter actual equipment hours (0 or more).");
+      return;
+    }
+    const usedAtts = completeForm.attachments.filter(a => a.used);
+    const attHours = usedAtts.reduce((sum, a) => sum + (Number(a.hours) || 0), 0);
+    const attSummary = usedAtts.map(a => `${a.name}: ${a.hours || 0} hrs`).join("; ");
+    const notes = [completeForm.completionNotes, attSummary ? `Attachments: ${attSummary}` : ""].filter(Boolean).join("\n");
+
     setCompleting(true);
     setCompleteError("");
     try {
@@ -147,12 +170,12 @@ export default function SchedulePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          actualHours: completeForm.actualHours ? Number(completeForm.actualHours) : null,
-          actualAttachmentHours: completeForm.actualAttachmentHours ? Number(completeForm.actualAttachmentHours) : null,
+          actualHours: completeForm.actualHours ? hours : null,
+          actualAttachmentHours: attHours || null,
           drivingHours: completeForm.drivingHours ? Number(completeForm.drivingHours) : null,
           fuelLiters: completeForm.fuelLiters ? Number(completeForm.fuelLiters) : null,
           fuelCost: completeForm.fuelCost ? Number(completeForm.fuelCost) : null,
-          completionNotes: completeForm.completionNotes || null,
+          completionNotes: notes || null,
         }),
       });
       const data = await res.json();
@@ -161,7 +184,7 @@ export default function SchedulePage() {
         return;
       }
       setToComplete(null);
-      setCompleteForm({ actualHours: "", actualAttachmentHours: "", drivingHours: "", fuelLiters: "", fuelCost: "", completionNotes: "" });
+      setCompleteForm({ actualHours: "", actualAttachmentHours: "", drivingHours: "", fuelLiters: "", fuelCost: "", completionNotes: "", attachments: [] });
       load();
     } catch {
       setCompleteError("Network error");
@@ -223,7 +246,27 @@ export default function SchedulePage() {
                 <div className="flex items-center gap-2">
                   {j.status !== "Completed" && (
                     <button
-                      onClick={() => { setCompleteError(""); setToComplete(j); }}
+                      onClick={() => {
+                        setCompleteError("");
+                        const eq = equipment.find((e: any) => e.id === j.equipmentId);
+                        const atts = (eq?.attachments || []).map((a: any) => ({
+                          id: a.id,
+                          name: a.name,
+                          rate: a.rate || 0,
+                          hours: "",
+                          used: false,
+                        }));
+                        setCompleteForm({
+                          actualHours: "",
+                          actualAttachmentHours: "",
+                          drivingHours: "",
+                          fuelLiters: "",
+                          fuelCost: "",
+                          completionNotes: "",
+                          attachments: atts,
+                        });
+                        setToComplete(j);
+                      }}
                       className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
                     >
                       <CheckCircle className="mr-1 inline h-3.5 w-3.5" /> Complete
@@ -341,6 +384,38 @@ export default function SchedulePage() {
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} placeholder="Access instructions, timing notes…" />
           </section>
 
+          {(form.status === "Completed" || form.actualHours || form.fuelCost) && (
+            <section className="space-y-2 rounded-lg border border-border p-3">
+              <h3 className="text-sm font-semibold">Actual Usage (for billing)</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Actual Hours</label>
+                  <input type="number" step="0.1" value={form.actualHours} onChange={(e) => setForm({ ...form, actualHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Attachment Hours</label>
+                  <input type="number" step="0.1" value={form.actualAttachmentHours} onChange={(e) => setForm({ ...form, actualAttachmentHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Driving Hours</label>
+                  <input type="number" step="0.1" value={form.drivingHours} onChange={(e) => setForm({ ...form, drivingHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Fuel Liters</label>
+                  <input type="number" step="0.1" value={form.fuelLiters} onChange={(e) => setForm({ ...form, fuelLiters: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Fuel Cost ($)</label>
+                  <input type="number" step="0.01" value={form.fuelCost} onChange={(e) => setForm({ ...form, fuelCost: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Completion Notes</label>
+                <textarea value={form.completionNotes} onChange={(e) => setForm({ ...form, completionNotes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
+              </div>
+            </section>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => { setShowForm(false); setEditingId(null); }} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
             <button type="submit" disabled={saving} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
@@ -353,37 +428,73 @@ export default function SchedulePage() {
       <Modal open={!!toComplete} onClose={() => setToComplete(null)} title="Complete Job">
         <div className="space-y-4">
           {completeError && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{completeError}</div>}
-          <p className="text-sm text-muted-foreground">Record actual usage. Leave blank if unknown. Hours will be added to the equipment hour meter.</p>
+
+          <div className="text-sm">
+            <div className="font-medium">{toComplete?.title}</div>
+            <div className="text-xs text-muted-foreground">
+              {toComplete?.equipment?.name || "No equipment assigned"}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground">Actual equipment hours *</label>
+            <input type="number" step="0.1" min="0" value={completeForm.actualHours} onChange={(e) => setCompleteForm({ ...completeForm, actualHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" placeholder="0.0" />
+          </div>
+
+          {completeForm.attachments.length > 0 && (
+            <div>
+              <div className="mb-1 text-xs font-medium text-muted-foreground">Attachments used</div>
+              <div className="space-y-2">
+                {completeForm.attachments.map((a, i) => (
+                  <div key={a.id} className="flex items-center gap-2">
+                    <input type="checkbox" checked={a.used} onChange={(e) => {
+                      const next = [...completeForm.attachments];
+                      next[i] = { ...a, used: e.target.checked };
+                      setCompleteForm({ ...completeForm, attachments: next });
+                    }} />
+                    <span className="flex-1 text-sm">{a.name}</span>
+                    {a.used && (
+                      <input type="number" step="0.1" min="0" placeholder="hrs" value={a.hours} onChange={(e) => {
+                        const next = [...completeForm.attachments];
+                        next[i] = { ...a, hours: e.target.value };
+                        setCompleteForm({ ...completeForm, attachments: next });
+                      }} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-muted-foreground">Actual Hours</label>
-              <input type="number" step="0.1" value={completeForm.actualHours} onChange={(e) => setCompleteForm({ ...completeForm, actualHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              <label className="text-xs text-muted-foreground">Driving hours</label>
+              <input type="number" step="0.1" min="0" value={completeForm.drivingHours} onChange={(e) => setCompleteForm({ ...completeForm, drivingHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Attachment Hours</label>
-              <input type="number" step="0.1" value={completeForm.actualAttachmentHours} onChange={(e) => setCompleteForm({ ...completeForm, actualAttachmentHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Driving Hours</label>
-              <input type="number" step="0.1" value={completeForm.drivingHours} onChange={(e) => setCompleteForm({ ...completeForm, drivingHours: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Fuel Liters</label>
-              <input type="number" step="0.1" value={completeForm.fuelLiters} onChange={(e) => setCompleteForm({ ...completeForm, fuelLiters: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Fuel Cost ($)</label>
-              <input type="number" step="0.01" value={completeForm.fuelCost} onChange={(e) => setCompleteForm({ ...completeForm, fuelCost: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
+              <label className="text-xs text-muted-foreground">Fuel cost ($)</label>
+              <input type="number" step="0.01" min="0" value={completeForm.fuelCost} onChange={(e) => setCompleteForm({ ...completeForm, fuelCost: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" />
             </div>
           </div>
+
           <div>
-            <label className="text-xs text-muted-foreground">Completion Notes</label>
-            <textarea value={completeForm.completionNotes} onChange={(e) => setCompleteForm({ ...completeForm, completionNotes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} />
+            <label className="text-xs text-muted-foreground">Completion notes</label>
+            <textarea value={completeForm.completionNotes} onChange={(e) => setCompleteForm({ ...completeForm, completionNotes: e.target.value })} className="w-full rounded border border-border bg-background px-3 py-2 text-sm" rows={2} placeholder="Optional work details" />
           </div>
+
+          <div className="rounded-lg border border-border bg-background/50 p-3 text-xs">
+            <div className="font-medium mb-1">Summary</div>
+            <div>Equipment hours: {completeForm.actualHours || "—"}</div>
+            {completeForm.attachments.filter(a => a.used).map(a => (
+              <div key={a.id}>{a.name}: {a.hours || "0"} hrs {a.rate > 0 ? `($${a.rate}/hr)` : ""}</div>
+            ))}
+            {completeForm.fuelCost && <div>Fuel: ${completeForm.fuelCost}</div>}
+          </div>
+
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setToComplete(null)} className="rounded border border-border px-4 py-2 text-sm">Cancel</button>
             <button type="button" onClick={handleComplete} disabled={completing} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
-              {completing ? "Saving…" : "Mark Completed"}
+              {completing ? "Saving…" : "Confirm Completion"}
             </button>
           </div>
         </div>
