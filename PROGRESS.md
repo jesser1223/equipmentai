@@ -1,16 +1,14 @@
 ## Current Development Stage
-**Stage**: Fix Job Completion vs. Invoice Calculation Mismatch  
+**Stage**: Attachment-Aware Utilization + Remove Equipment Map Fields  
 **Date**: 2026-10-26  
-**Status**: Complete Job summary and invoice draft now use the same `calculateJobCharges` function. Attachment selections are saved on the job and used when creating the draft. Totals match.
+**Status**: Machine utilization uses actualHours only. Attachment hours are tracked separately from attachmentUsage and are never added to the machine total or hour meter. Equipment form lat/lng map fields removed. Job-site map unchanged. No schema changes.
 
-## Why they differed
-The Complete form charged each selected attachment at its own rate. The invoice draft only charged equipment hours × rate + fuel and ignored per-attachment lines.
+## Utilization rules
+- Machine hours = sum of job.actualHours on completed jobs
+- Attachment hours = sum of hours from job.attachmentUsage (only when recorded)
+- Attachment hours are not added to the machine
+- Hour meter increases by actualHours only (already the case in complete route)
+- Missing attachment hours stay unknown
 
-## How they share logic
-Both call `src/lib/job-billing.ts` → `calculateJobCharges`. The complete endpoint stores the selected attachments in `Job.attachmentUsage`. The invoice draft reads that and produces the same lines, subtotal, GST, and total.
-
-## Schema
-Added optional `attachmentUsage Json?` on Job. Run `npx prisma db push`.
-
-## Tests
-`src/lib/job-billing.test.ts` covers hourly + attachments + fuel + GST, missing rates, and zero tax. Run with the project’s test runner if available.
+## Equipment map
+Removed optional Latitude/Longitude fields from the equipment form. No dedicated equipment map page existed. Job-site map on the dashboard is unchanged.

@@ -109,8 +109,7 @@ export function EquipmentForm({
           <Field label="Daily Rate ($/day)" helper="Amount charged per workday." value={form.dailyRate} onChange={(v) => update("dailyRate", v)} type="number" />
           <Field label="Location" value={form.location} onChange={(v) => update("location", v)} />
           <Field label="Hour Meter" helper="Total recorded machine hours." value={form.hourMeter} onChange={(v) => update("hourMeter", v)} type="number" />
-          <Field label="Latitude" helper="Optional map coordinate." value={form.latitude} onChange={(v) => update("latitude", v)} type="number" />
-          <Field label="Longitude" helper="Optional map coordinate." value={form.longitude} onChange={(v) => update("longitude", v)} type="number" />
+          <Field label="Notes" value={form.notes} onChange={(v) => update("notes", v)} />
         </div>
       </section>
 

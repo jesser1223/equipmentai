@@ -25,7 +25,7 @@ export default function UtilizationPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Equipment Utilization</h1>
-        <p className="text-sm text-muted-foreground">Total recorded actual hours from completed jobs. Available hours are not estimated.</p>
+        <p className="text-sm text-muted-foreground">Machine hours from completed jobs. Attachment hours are tracked separately and are not added to the machine.</p>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -56,6 +56,29 @@ export default function UtilizationPage() {
                   <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>
                   <td className="px-4 py-3 text-right">{eq.jobCount}</td>
                   <td className="px-4 py-3 text-right">{eq.totalHours.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {data?.attachments?.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="border-b border-border px-4 py-2 text-xs font-medium uppercase text-muted-foreground">Attachment Usage</div>
+          <table className="w-full text-sm">
+            <thead className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Attachment</th>
+                <th className="px-4 py-3 text-right">Jobs</th>
+                <th className="px-4 py-3 text-right">Hours</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {data.attachments.map((a: any) => (
+                <tr key={a.id}>
+                  <td className="px-4 py-3">{a.name}</td>
+                  <td className="px-4 py-3 text-right">{a.jobCount}</td>
+                  <td className="px-4 py-3 text-right">{a.totalHours.toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>

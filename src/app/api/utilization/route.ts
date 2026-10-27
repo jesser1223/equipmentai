@@ -30,29 +30,47 @@ export async function GET(req: Request) {
   });
 
   const byEquipment: Record<string, { id: string; name: string; unitNumber: string; totalHours: number; jobCount: number }> = {};
+  const byAttachment: Record<string, { id: string; name: string; totalHours: number; jobCount: number }> = {};
 
   for (const job of jobs) {
-    if (!job.equipment || job.actualHours == null) continue;
-    const id = job.equipment.id;
-    if (!byEquipment[id]) {
-      byEquipment[id] = {
-        id,
-        name: job.equipment.name,
-        unitNumber: job.equipment.unitNumber,
-        totalHours: 0,
-        jobCount: 0,
-      };
+    // Machine hours = actualHours only. Attachment hours are never added here.
+    if (job.equipment && job.actualHours != null) {
+      const id = job.equipment.id;
+      if (!byEquipment[id]) {
+        byEquipment[id] = {
+          id,
+          name: job.equipment.name,
+          unitNumber: job.equipment.unitNumber,
+          totalHours: 0,
+          jobCount: 0,
+        };
+      }
+      byEquipment[id].totalHours += job.actualHours;
+      byEquipment[id].jobCount += 1;
     }
-    byEquipment[id].totalHours += job.actualHours;
-    byEquipment[id].jobCount += 1;
+
+    // Attachment usage is tracked separately from machine hours
+    if (Array.isArray(job.attachmentUsage)) {
+      for (const att of job.attachmentUsage as any[]) {
+        const hours = Number(att.hours) || 0;
+        if (hours <= 0 || !att.id) continue;
+        if (!byAttachment[att.id]) {
+          byAttachment[att.id] = { id: att.id, name: att.name || "Attachment", totalHours: 0, jobCount: 0 };
+        }
+        byAttachment[att.id].totalHours += hours;
+        byAttachment[att.id].jobCount += 1;
+      }
+    }
   }
 
-  const result = Object.values(byEquipment).sort((a, b) => b.totalHours - a.totalHours);
+  const equipment = Object.values(byEquipment).sort((a, b) => b.totalHours - a.totalHours);
+  const attachments = Object.values(byAttachment).sort((a, b) => b.totalHours - a.totalHours);
 
   return NextResponse.json({
     from,
     to,
-    note: "Utilization shows total recorded actualHours from completed jobs only. Available hours are not estimated.",
-    equipment: result,
+    note: "Machine utilization uses actualHours only. Attachment hours are tracked separately and are not added to the machine.",
+    equipment,
+    attachments,
   });
 }
