@@ -29,11 +29,9 @@ export async function GET(req: Request) {
     include: { equipment: { select: { id: true, name: true, unitNumber: true } } },
   });
 
-  const byEquipment: Record<string, { id: string; name: string; unitNumber: string; totalHours: number; jobCount: number }> = {};
-  const byAttachment: Record<string, { id: string; name: string; totalHours: number; jobCount: number }> = {};
+  const byEquipment: Record<string, { id: string; name: string; unitNumber: string; totalHours: number; jobCount: number; attachments: Record<string, { id: string; name: string; totalHours: number; jobCount: number }> }> = {};
 
   for (const job of jobs) {
-    // Machine hours = actualHours only. Attachment hours are never added here.
     if (job.equipment && job.actualHours != null) {
       const id = job.equipment.id;
       if (!byEquipment[id]) {
@@ -43,34 +41,34 @@ export async function GET(req: Request) {
           unitNumber: job.equipment.unitNumber,
           totalHours: 0,
           jobCount: 0,
+          attachments: {},
         };
       }
       byEquipment[id].totalHours += job.actualHours;
       byEquipment[id].jobCount += 1;
-    }
 
-    // Attachment usage is tracked separately from machine hours
-    if (Array.isArray(job.attachmentUsage)) {
-      for (const att of job.attachmentUsage as any[]) {
-        const hours = Number(att.hours) || 0;
-        if (hours <= 0 || !att.id) continue;
-        if (!byAttachment[att.id]) {
-          byAttachment[att.id] = { id: att.id, name: att.name || "Attachment", totalHours: 0, jobCount: 0 };
+      if (Array.isArray(job.attachmentUsage)) {
+        for (const att of job.attachmentUsage as any[]) {
+          const hours = Number(att.hours) || 0;
+          if (hours <= 0 || !att.id) continue;
+          if (!byEquipment[id].attachments[att.id]) {
+            byEquipment[id].attachments[att.id] = { id: att.id, name: att.name || "Attachment", totalHours: 0, jobCount: 0 };
+          }
+          byEquipment[id].attachments[att.id].totalHours += hours;
+          byEquipment[id].attachments[att.id].jobCount += 1;
         }
-        byAttachment[att.id].totalHours += hours;
-        byAttachment[att.id].jobCount += 1;
       }
     }
   }
 
-  const equipment = Object.values(byEquipment).sort((a, b) => b.totalHours - a.totalHours);
-  const attachments = Object.values(byAttachment).sort((a, b) => b.totalHours - a.totalHours);
+  const equipment = Object.values(byEquipment)
+    .map((eq) => ({ ...eq, attachments: Object.values(eq.attachments).sort((a, b) => b.totalHours - a.totalHours) }))
+    .sort((a, b) => b.totalHours - a.totalHours);
 
   return NextResponse.json({
     from,
     to,
-    note: "Machine utilization uses actualHours only. Attachment hours are tracked separately and are not added to the machine.",
+    note: "Machine hours are actualHours only. Attachment hours are listed under the equipment they were used on and are not added to the machine total.",
     equipment,
-    attachments,
   });
 }

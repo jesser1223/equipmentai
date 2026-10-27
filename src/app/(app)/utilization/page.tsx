@@ -51,12 +51,22 @@ export default function UtilizationPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {data.equipment.map((eq: any) => (
-                <tr key={eq.id}>
-                  <td className="px-4 py-3">{eq.name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>
-                  <td className="px-4 py-3 text-right">{eq.jobCount}</td>
-                  <td className="px-4 py-3 text-right">{eq.totalHours.toFixed(1)}</td>
-                </tr>
+                <>
+                  <tr key={eq.id}>
+                    <td className="px-4 py-3 font-medium">{eq.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>
+                    <td className="px-4 py-3 text-right">{eq.jobCount}</td>
+                    <td className="px-4 py-3 text-right">{eq.totalHours.toFixed(1)}</td>
+                  </tr>
+                  {(eq.attachments || []).map((a: any) => (
+                    <tr key={a.id} className="bg-background/40">
+                      <td className="px-4 py-2 pl-8 text-sm text-muted-foreground">↳ {a.name}</td>
+                      <td className="px-4 py-2"></td>
+                      <td className="px-4 py-2 text-right text-sm text-muted-foreground">{a.jobCount}</td>
+                      <td className="px-4 py-2 text-right text-sm text-muted-foreground">{a.totalHours.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </>
               ))}
             </tbody>
           </table>
