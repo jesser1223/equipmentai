@@ -59,6 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         fuelLiters,
         fuelCost,
         completionNotes: body.completionNotes || null,
+        attachmentUsage: Array.isArray(body.attachments) ? body.attachments : null,
       },
       include: { customer: true, equipment: true, invoice: true },
     });

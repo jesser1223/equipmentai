@@ -248,6 +248,7 @@ model Job {
   fuelLiters  Float?
   fuelCost    Float?
   completionNotes String?
+  attachmentUsage Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

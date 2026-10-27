@@ -1,10 +1,16 @@
 ## Current Development Stage
-**Stage**: Show Configured Rates in Complete Job  
+**Stage**: Fix Job Completion vs. Invoice Calculation Mismatch  
 **Date**: 2026-10-26  
-**Status**: Complete Job form now displays the saved equipment rate ($/hour) and each attachment’s rate next to the item. The live summary shows the rate × hours breakdown, subtotal, GST, and estimated total. Missing rates are flagged. Rates are read-only. No schema changes.
+**Status**: Complete Job summary and invoice draft now use the same `calculateJobCharges` function. Attachment selections are saved on the job and used when creating the draft. Totals match.
 
-## Verify
-1. Assign equipment that has an hourly rate and open Complete.
-2. Confirm the rate appears under the equipment name.
-3. Select an attachment — its rate appears.
-4. Enter hours — the estimate updates with the rate × hours shown.
+## Why they differed
+The Complete form charged each selected attachment at its own rate. The invoice draft only charged equipment hours × rate + fuel and ignored per-attachment lines.
+
+## How they share logic
+Both call `src/lib/job-billing.ts` → `calculateJobCharges`. The complete endpoint stores the selected attachments in `Job.attachmentUsage`. The invoice draft reads that and produces the same lines, subtotal, GST, and total.
+
+## Schema
+Added optional `attachmentUsage Json?` on Job. Run `npx prisma db push`.
+
+## Tests
+`src/lib/job-billing.test.ts` covers hourly + attachments + fuel + GST, missing rates, and zero tax. Run with the project’s test runner if available.

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2, CheckCircle } from "lucide-react";
+import { calculateJobCharges } from "@/lib/job-billing";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -179,6 +180,7 @@ export default function SchedulePage() {
           fuelLiters: completeForm.fuelLiters ? Number(completeForm.fuelLiters) : null,
           fuelCost: completeForm.fuelCost ? Number(completeForm.fuelCost) : null,
           completionNotes: notes || null,
+          attachments: usedAtts.map(a => ({ id: a.id, name: a.name, rate: a.rate, hours: Number(a.hours) || 0 })),
         }),
       });
       const data = await res.json();
@@ -500,38 +502,26 @@ export default function SchedulePage() {
             <div className="mb-2 text-xs font-medium text-muted-foreground">Estimated charges</div>
             {(() => {
               const eq = equipment.find((e: any) => e.id === toComplete?.equipmentId);
-              const hours = Number(completeForm.actualHours) || 0;
-              const eqRate = eq?.hourlyRate || 0;
-              const eqCharge = hours > 0 && eqRate > 0 ? Math.round(hours * eqRate * 100) / 100 : 0;
-              const missing: string[] = [];
-              if (toComplete?.equipmentId && hours > 0 && eqRate <= 0) missing.push("equipment rate");
-              const attCharges = completeForm.attachments.filter(a => a.used).map(a => {
-                const h = Number(a.hours) || 0;
-                if (h > 0 && a.rate <= 0) missing.push(`${a.name} rate`);
-                return { name: a.name, amount: h > 0 && a.rate > 0 ? Math.round(h * a.rate * 100) / 100 : 0 };
+              const calc = calculateJobCharges({
+                equipmentName: eq?.name,
+                equipmentUnit: eq?.unitNumber,
+                equipmentRate: eq?.hourlyRate,
+                actualHours: Number(completeForm.actualHours) || 0,
+                attachments: completeForm.attachments.filter(a => a.used).map(a => ({
+                  id: a.id, name: a.name, rate: a.rate, hours: Number(a.hours) || 0,
+                })),
+                fuelCost: Number(completeForm.fuelCost) || 0,
+                taxRate,
               });
-              const attTotal = attCharges.reduce((s, a) => s + a.amount, 0);
-              const fuel = Number(completeForm.fuelCost) || 0;
-              const subtotal = eqCharge + attTotal + fuel;
-              const gst = Math.round(subtotal * taxRate * 100) / 100;
-              const total = Math.round((subtotal + gst) * 100) / 100;
               return (
                 <div className="space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span>Equipment — {eq?.name || "—"} {eqRate > 0 ? `($${eqRate}/hr × ${hours})` : ""}</span>
-                    <span>${eqCharge.toFixed(2)}</span>
-                  </div>
-                  {attCharges.map(a => (
-                    <div key={a.name} className="flex justify-between">
-                      <span>{a.name}</span>
-                      <span>${a.amount.toFixed(2)}</span>
-                    </div>
+                  {calc.lines.map((l, i) => (
+                    <div key={i} className="flex justify-between"><span>{l.description}</span><span>${l.amount.toFixed(2)}</span></div>
                   ))}
-                  {fuel > 0 && <div className="flex justify-between"><span>Fuel</span><span>${fuel.toFixed(2)}</span></div>}
-                  <div className="flex justify-between border-t border-border pt-1"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span>GST ({(taxRate * 100).toFixed(0)}%)</span><span>${gst.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-semibold text-sm"><span>Estimated total</span><span>${total.toFixed(2)} CAD</span></div>
-                  {missing.length > 0 && <div className="mt-1 text-amber-400">Missing rate: {missing.join(", ")}</div>}
+                  <div className="flex justify-between border-t border-border pt-1"><span>Subtotal</span><span>${calc.subtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>GST ({(taxRate * 100).toFixed(0)}%)</span><span>${calc.taxAmount.toFixed(2)}</span></div>
+                  <div className="flex justify-between font-semibold text-sm"><span>Estimated total</span><span>${calc.total.toFixed(2)} CAD</span></div>
+                  {calc.missing.length > 0 && <div className="mt-1 text-amber-400">Missing rate: {calc.missing.join(", ")}</div>}
                   <div className="mt-1 text-[10px] text-muted-foreground">Estimate only. Invoice stays Draft until reviewed.</div>
                 </div>
               );

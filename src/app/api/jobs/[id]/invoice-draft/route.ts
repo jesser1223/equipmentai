@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
+import { calculateJobCharges } from "@/lib/job-billing";
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -26,46 +27,32 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
 
-  const missing: string[] = [];
-  const lines: { description: string; quantity: number; unit: string; rate: number; amount: number }[] = [];
+  const attachments = Array.isArray(job.attachmentUsage)
+    ? (job.attachmentUsage as any[]).map((a) => ({
+        id: a.id,
+        name: a.name,
+        rate: Number(a.rate) || 0,
+        hours: Number(a.hours) || 0,
+      }))
+    : [];
 
-  if (job.equipment) {
-    if (job.actualHours == null || job.actualHours <= 0) {
-      missing.push("Actual equipment hours");
-    } else if (job.equipment.hourlyRate <= 0) {
-      missing.push(`Hourly rate for ${job.equipment.name}`);
-    } else {
-      const amount = Math.round(job.actualHours * job.equipment.hourlyRate * 100) / 100;
-      lines.push({
-        description: `${job.equipment.name} (${job.equipment.unitNumber}) – machine hours`,
-        quantity: job.actualHours,
-        unit: "hours",
-        rate: job.equipment.hourlyRate,
-        amount,
-      });
-    }
-  }
+  const calc = calculateJobCharges({
+    equipmentName: job.equipment?.name,
+    equipmentUnit: job.equipment?.unitNumber,
+    equipmentRate: job.equipment?.hourlyRate,
+    actualHours: job.actualHours,
+    attachments,
+    fuelCost: job.fuelCost,
+    taxRate: org.taxRate || 0,
+  });
 
-  if (job.fuelCost != null && job.fuelCost > 0) {
-    lines.push({
-      description: "Fuel",
-      quantity: 1,
-      unit: "each",
-      rate: job.fuelCost,
-      amount: job.fuelCost,
-    });
-  }
-
-  if (lines.length === 0) {
+  if (calc.lines.length === 0) {
     return NextResponse.json({
       error: "Cannot create draft. Missing required billing information.",
-      missing,
+      missing: calc.missing,
     }, { status: 400 });
   }
 
-  const subtotal = lines.reduce((sum, l) => sum + l.amount, 0);
-  const taxAmount = Math.round(subtotal * (org.taxRate || 0) * 100) / 100;
-  const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const number = `${org.invoicePrefix}-${String(org.nextInvoiceNum).padStart(4, "0")}`;
 
   const invoice = await prisma.$transaction(async (tx) => {
@@ -77,11 +64,11 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
         customerId: job.customerId,
         jobId: job.id,
         notes: job.completionNotes || org.defaultNotes,
-        subtotal: Math.round(subtotal * 100) / 100,
-        taxRate: org.taxRate,
-        taxAmount,
-        total,
-        lines: { create: lines },
+        subtotal: calc.subtotal,
+        taxRate: calc.taxRate,
+        taxAmount: calc.taxAmount,
+        total: calc.total,
+        lines: { create: calc.lines },
       },
       include: { lines: true, customer: true },
     });
@@ -92,5 +79,5 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     return inv;
   });
 
-  return NextResponse.json({ invoice, missing });
+  return NextResponse.json({ invoice, missing: calc.missing });
 }
