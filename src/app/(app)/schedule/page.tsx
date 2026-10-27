@@ -229,6 +229,22 @@ export default function SchedulePage() {
                       <CheckCircle className="mr-1 inline h-3.5 w-3.5" /> Complete
                     </button>
                   )}
+                  {j.status === "Completed" && !j.invoice && (
+                    <button
+                      onClick={async () => {
+                        const res = await fetch(`/api/jobs/${j.id}/invoice-draft`, { method: "POST" });
+                        const data = await res.json();
+                        if (res.ok) {
+                          window.location.href = "/invoices";
+                        } else {
+                          alert(data.error || "Could not create invoice draft");
+                        }
+                      }}
+                      className="rounded-lg bg-accent px-3 py-1.5 text-xs text-accent-foreground"
+                    >
+                      Create Invoice Draft
+                    </button>
+                  )}
                   <button onClick={() => openEdit(j)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
                     <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                   </button>
