@@ -434,9 +434,15 @@ export default function SchedulePage() {
 
           <div className="text-sm">
             <div className="font-medium">{toComplete?.title}</div>
-            <div className="text-xs text-muted-foreground">
-              {toComplete?.equipment?.name || "No equipment assigned"}
-            </div>
+            {(() => {
+              const eq = equipment.find((e: any) => e.id === toComplete?.equipmentId);
+              return eq ? (
+                <div className="text-xs text-muted-foreground">
+                  {eq.name} · Rate: ${eq.hourlyRate || 0}/hour
+                  {(!eq.hourlyRate || eq.hourlyRate <= 0) && <span className="text-amber-400"> (rate not set)</span>}
+                </div>
+              ) : <div className="text-xs text-muted-foreground">No equipment assigned</div>;
+            })()}
           </div>
 
           <div>
@@ -455,7 +461,12 @@ export default function SchedulePage() {
                       next[i] = { ...a, used: e.target.checked };
                       setCompleteForm({ ...completeForm, attachments: next });
                     }} />
-                    <span className="flex-1 text-sm">{a.name}</span>
+                    <div className="flex-1 text-sm">
+                      {a.name}
+                      <div className="text-[11px] text-muted-foreground">
+                        Rate: ${a.rate || 0}/hour {a.rate <= 0 && <span className="text-amber-400">(not set)</span>}
+                      </div>
+                    </div>
                     {a.used && (
                       <input type="number" step="0.1" min="0" placeholder="hrs" value={a.hours} onChange={(e) => {
                         const next = [...completeForm.attachments];
@@ -506,13 +517,21 @@ export default function SchedulePage() {
               const total = Math.round((subtotal + gst) * 100) / 100;
               return (
                 <div className="space-y-1 text-xs">
-                  <div className="flex justify-between"><span>Equipment</span><span>${eqCharge.toFixed(2)}</span></div>
-                  {attCharges.map(a => <div key={a.name} className="flex justify-between"><span>{a.name}</span><span>${a.amount.toFixed(2)}</span></div>)}
+                  <div className="flex justify-between">
+                    <span>Equipment — {eq?.name || "—"} {eqRate > 0 ? `($${eqRate}/hr × ${hours})` : ""}</span>
+                    <span>${eqCharge.toFixed(2)}</span>
+                  </div>
+                  {attCharges.map(a => (
+                    <div key={a.name} className="flex justify-between">
+                      <span>{a.name}</span>
+                      <span>${a.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
                   {fuel > 0 && <div className="flex justify-between"><span>Fuel</span><span>${fuel.toFixed(2)}</span></div>}
                   <div className="flex justify-between border-t border-border pt-1"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
                   <div className="flex justify-between"><span>GST ({(taxRate * 100).toFixed(0)}%)</span><span>${gst.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-semibold"><span>Estimated total</span><span>${total.toFixed(2)}</span></div>
-                  {missing.length > 0 && <div className="mt-1 text-amber-400">Missing: {missing.join(", ")}</div>}
+                  <div className="flex justify-between font-semibold text-sm"><span>Estimated total</span><span>${total.toFixed(2)} CAD</span></div>
+                  {missing.length > 0 && <div className="mt-1 text-amber-400">Missing rate: {missing.join(", ")}</div>}
                   <div className="mt-1 text-[10px] text-muted-foreground">Estimate only. Invoice stays Draft until reviewed.</div>
                 </div>
               );
