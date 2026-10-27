@@ -451,12 +451,8 @@ export default function InvoicesPage() {
                         frame.style.border = "0";
                         frame.src = `/print/invoice/${inv.id}`;
                         document.body.appendChild(frame);
-                        frame.onload = () => {
-                          setTimeout(() => {
-                            frame.contentWindow?.print();
-                            setTimeout(() => frame.remove(), 1000);
-                          }, 500);
-                        };
+                        // The print page calls window.print() itself after the invoice loads
+                        setTimeout(() => frame.remove(), 8000);
                       }}
                       className="text-xs text-accent hover:underline"
                     >

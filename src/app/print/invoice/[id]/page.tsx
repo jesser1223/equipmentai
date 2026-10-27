@@ -18,9 +18,8 @@ export default function InvoicePrintPage({ params }: { params: Promise<{ id: str
         return;
       }
       setInvoice(data);
-      setTimeout(() => {
-        window.print();
-      }, 400);
+      // Wait for the invoice to render, then print
+      setTimeout(() => window.print(), 600);
     })();
     return () => { cancelled = true; };
   }, [params]);
