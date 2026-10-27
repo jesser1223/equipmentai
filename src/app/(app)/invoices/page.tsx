@@ -440,12 +440,28 @@ export default function InvoicesPage() {
                   <td className="px-4 py-3">${inv.amountPaid.toFixed(2)}</td>
                   <td className="px-4 py-3">{inv.status}</td>
                   <td className="px-4 py-3 text-right space-x-3">
-                    <a
-                      href={`/print/invoice/${inv.id}`}
+                    <button
+                      onClick={() => {
+                        const frame = document.createElement("iframe");
+                        frame.style.position = "fixed";
+                        frame.style.right = "0";
+                        frame.style.bottom = "0";
+                        frame.style.width = "0";
+                        frame.style.height = "0";
+                        frame.style.border = "0";
+                        frame.src = `/print/invoice/${inv.id}`;
+                        document.body.appendChild(frame);
+                        frame.onload = () => {
+                          setTimeout(() => {
+                            frame.contentWindow?.print();
+                            setTimeout(() => frame.remove(), 1000);
+                          }, 500);
+                        };
+                      }}
                       className="text-xs text-accent hover:underline"
                     >
                       Print
-                    </a>
+                    </button>
                     <a
                       href={`/api/invoices/${inv.id}/pdf`}
                       className="text-xs text-accent hover:underline"
