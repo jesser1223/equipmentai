@@ -1,14 +1,10 @@
 ## Current Development Stage
-**Stage**: Attachment-Aware Utilization + Remove Equipment Map Fields  
+**Stage**: Professional Utilization Filters  
 **Date**: 2026-10-26  
-**Status**: Machine utilization uses actualHours only. Attachment hours are tracked separately from attachmentUsage and are never added to the machine total or hour meter. Equipment form lat/lng map fields removed. Job-site map unchanged. No schema changes.
+**Status**: Utilization page has date presets (Today, This Week, This Month, Last 30 Days, This Quarter, This Year), custom range, equipment selector, search, and reset. Summary cards show operating hours, jobs, and machines. Attachments stay nested under their equipment. Utilization percentage is not shown because available hours are not tracked. No schema changes.
 
-## Utilization rules
-- Machine hours = sum of job.actualHours on completed jobs
-- Attachment hours = sum of hours from job.attachmentUsage (only when recorded)
-- Attachment hours are not added to the machine
-- Hour meter increases by actualHours only (already the case in complete route)
-- Missing attachment hours stay unknown
-
-## Equipment map
-Removed optional Latitude/Longitude fields from the equipment form. No dedicated equipment map page existed. Job-site map on the dashboard is unchanged.
+## Metrics
+- Operating hours: sum of actualHours on completed jobs in the range
+- Jobs: count of completed jobs with hours
+- Machines: equipment with recorded hours
+- Attachment hours: listed under the machine, not added to the machine total
