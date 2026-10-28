@@ -22,6 +22,25 @@ export async function PATCH(req: Request) {
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
+
+  let overdueReminderDays: number | undefined;
+  if (body.overdueReminderDays != null) {
+    const n = Number(body.overdueReminderDays);
+    if (!Number.isInteger(n) || n < 1 || n > 90) {
+      return NextResponse.json({ error: "Overdue reminder days must be a whole number from 1 to 90." }, { status: 400 });
+    }
+    overdueReminderDays = n;
+  }
+
+  let quoteFollowUpDays: number | undefined;
+  if (body.quoteFollowUpDays != null) {
+    const n = Number(body.quoteFollowUpDays);
+    if (!Number.isInteger(n) || n < 1 || n > 90) {
+      return NextResponse.json({ error: "Quote follow-up days must be a whole number from 1 to 90." }, { status: 400 });
+    }
+    quoteFollowUpDays = n;
+  }
+
   const updated = await prisma.organization.update({
     where: { id: orgId },
     data: {
@@ -38,6 +57,9 @@ export async function PATCH(req: Request) {
       logoUrl: body.logoUrl,
       invoiceFooter: body.invoiceFooter,
       replyToEmail: body.replyToEmail,
+      autoSendInvoices: body.autoSendInvoices != null ? Boolean(body.autoSendInvoices) : undefined,
+      overdueReminderDays,
+      quoteFollowUpDays,
     },
   });
   return NextResponse.json(updated);

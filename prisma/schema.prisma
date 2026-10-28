@@ -29,6 +29,9 @@ model Organization {
   nextInvoiceNum Int      @default(1)
   defaultNotes   String?
   paymentTerms   String?
+  autoSendInvoices    Boolean @default(false)
+  overdueReminderDays Int     @default(7)
+  quoteFollowUpDays   Int     @default(3)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

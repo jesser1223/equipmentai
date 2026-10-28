@@ -48,6 +48,20 @@ export default function SettingsPage() {
         <Field label="Invoice footer" value={org.invoiceFooter || ""} onChange={(v) => setOrg({ ...org, invoiceFooter: v })} />
         <Field label="Reply-to email" value={org.replyToEmail || ""} onChange={(v) => setOrg({ ...org, replyToEmail: v })} />
 
+        <div className="border-t border-border pt-4 space-y-3">
+          <h2 className="text-sm font-semibold">Workflow Automation</h2>
+          <p className="text-xs text-muted-foreground">These preferences configure future automation. Reminders and follow-ups are not active yet.</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!org.autoSendInvoices} onChange={(e) => setOrg({ ...org, autoSendInvoices: e.target.checked })} />
+            Automatically email invoices when issued
+          </label>
+          <p className="text-[11px] text-muted-foreground -mt-2">Off by default. When enabled later, issued invoices can be emailed to the customer.</p>
+          <Field label="Days after an invoice becomes overdue before sending a reminder" value={String(org.overdueReminderDays ?? 7)} onChange={(v) => setOrg({ ...org, overdueReminderDays: Number(v) })} />
+          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90. Reminders are not active yet.</p>
+          <Field label="Days to wait before following up on a sent quote" value={String(org.quoteFollowUpDays ?? 3)} onChange={(v) => setOrg({ ...org, quoteFollowUpDays: Number(v) })} />
+          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90. Quote follow-ups are not active yet.</p>
+        </div>
+
         <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50">
           {saving ? "Saving…" : "Save Settings"}
         </button>

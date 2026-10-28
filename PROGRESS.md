@@ -1,10 +1,18 @@
 ## Current Development Stage
-**Stage**: Professional Utilization Filters  
-**Date**: 2026-10-26  
-**Status**: Utilization page has date presets (Today, This Week, This Month, Last 30 Days, This Quarter, This Year), custom range, equipment selector, search, and reset. Summary cards show operating hours, jobs, and machines. Attachments stay nested under their equipment. Utilization percentage is not shown because available hours are not tracked. No schema changes.
+**Stage**: Workflow Automation Batch 1 — Company Settings  
+**Date**: 2026-10-27  
+**Status**: Organization settings now include autoSendInvoices (default false), overdueReminderDays (default 7), and quoteFollowUpDays (default 3). Settings page has a Workflow Automation section. Server validates 1–90. No emails are sent. No cron jobs were added. No invoice, quote, or billing behavior changed.
 
-## Metrics
-- Operating hours: sum of actualHours on completed jobs in the range
-- Jobs: count of completed jobs with hours
-- Machines: equipment with recorded hours
-- Attachment hours: listed under the machine, not added to the machine total
+## Schema
+Added to Organization:
+- autoSendInvoices Boolean @default(false)
+- overdueReminderDays Int @default(7)
+- quoteFollowUpDays Int @default(3)
+
+Run: npx prisma db push
+
+## Files
+- prisma/schema.prisma
+- src/app/api/settings/route.ts
+- src/app/(app)/settings/page.tsx
+- PROGRESS.md
