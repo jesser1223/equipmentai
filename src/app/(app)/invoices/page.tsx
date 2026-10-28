@@ -20,6 +20,7 @@ export default function InvoicesPage() {
   const [form, setForm] = useState({ customerId: "", dueDate: "", notes: "", description: "", quantity: 1, rate: 0 });
   const [toDelete, setToDelete] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [issueResult, setIssueResult] = useState<{ title: string; message: string; tone: "success" | "warning" | "error"; canEmail?: boolean; invoiceId?: string } | null>(null);
   const [payTarget, setPayTarget] = useState<any>(null);
   const [payAmount, setPayAmount] = useState("");
   const [paying, setPaying] = useState(false);
@@ -470,13 +471,18 @@ export default function InvoicesPage() {
                           const res = await fetch(`/api/invoices/${inv.id}/issue`, { method: "POST" });
                           const data = await res.json();
                           if (!res.ok) {
-                            alert(data.error || "Could not issue invoice");
+                            setIssueResult({ title: "Could not issue invoice", message: data.error || "Issuance failed.", tone: "error" });
                             return;
                           }
-                          if (data.email?.sent) alert("Invoice issued and emailed.");
-                          else if (data.email?.skipped) alert(`Invoice issued. Email skipped: ${data.email.skipped}`);
-                          else if (data.email?.failed) alert(`Invoice issued. ${data.email.failed}`);
-                          else alert("Invoice issued.");
+                          if (data.email?.sent) {
+                            setIssueResult({ title: "Invoice issued", message: "The invoice was issued and emailed successfully.", tone: "success" });
+                          } else if (data.email?.skipped) {
+                            setIssueResult({ title: "Invoice issued", message: `Issued. Email skipped: ${data.email.skipped}`, tone: "warning", canEmail: true, invoiceId: inv.id });
+                          } else if (data.email?.failed) {
+                            setIssueResult({ title: "Invoice issued", message: data.email.failed, tone: "error", canEmail: true, invoiceId: inv.id });
+                          } else {
+                            setIssueResult({ title: "Invoice issued", message: "The invoice was issued.", tone: "success" });
+                          }
                           load();
                         }}
                         className="text-xs text-accent hover:underline"
@@ -523,6 +529,36 @@ export default function InvoicesPage() {
         confirmLabel="Delete Invoice"
         loading={deleting}
       />
+
+      <Modal open={!!issueResult} onClose={() => setIssueResult(null)} title={issueResult?.title || "Invoice"}>
+        <div className="space-y-4">
+          <p className={`text-sm ${issueResult?.tone === "error" ? "text-danger" : issueResult?.tone === "warning" ? "text-amber-400" : ""}`}>
+            {issueResult?.message}
+          </p>
+          <div className="flex justify-end gap-2">
+            {issueResult?.canEmail && issueResult.invoiceId && (
+              <button
+                onClick={() => {
+                  const inv = invoices.find((i) => i.id === issueResult.invoiceId);
+                  setIssueResult(null);
+                  if (inv) {
+                    setEmailTarget(inv);
+                    setEmailTo(inv.customer?.email || "");
+                    setEmailSubject(`Invoice ${inv.number} from ${inv.organization?.name || "EquipmentAI"}`);
+                    setEmailError("");
+                  }
+                }}
+                className="rounded border border-border px-4 py-2 text-sm"
+              >
+                Send email
+              </button>
+            )}
+            <button onClick={() => setIssueResult(null)} className="rounded bg-accent px-4 py-2 text-sm text-accent-foreground">
+              Done
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={!!editTarget} onClose={() => !savingEdit && setEditTarget(null)} title={`Edit ${editTarget?.number || "invoice"}`}>
         <div className="space-y-5">
