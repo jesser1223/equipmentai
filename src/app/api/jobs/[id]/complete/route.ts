@@ -35,11 +35,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Fuel cost must be a non-negative number." }, { status: 400 });
   }
 
-  // If equipment and actual hours, validate against current hour meter (hours added, not absolute)
+  // Machine hour meter includes equipment hours plus any attachment hours used on it
+  const attachmentHours = Array.isArray(body.attachments)
+    ? body.attachments.reduce((sum: number, a: any) => sum + (Number(a.hours) || 0), 0)
+    : 0;
+  const machineHours = (actualHours || 0) + attachmentHours;
+
   let newHourMeter: number | null = null;
-  if (job.equipment && actualHours != null && actualHours > 0) {
+  if (job.equipment && machineHours > 0) {
     const current = job.equipment.hourMeter ?? 0;
-    newHourMeter = current + actualHours;
+    newHourMeter = current + machineHours;
     const check = validateHourMeterUpdate(job.equipment.hourMeter, newHourMeter);
     if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
   }

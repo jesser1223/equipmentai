@@ -92,7 +92,7 @@ export default function UtilizationPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Equipment Utilization</h1>
-        <p className="text-sm text-muted-foreground">Operating hours from completed jobs. Attachment hours are shown under each machine and are not added to the machine total.</p>
+        <p className="text-sm text-muted-foreground">Machine hours include equipment hours plus attachment hours used on that machine. Attachments are listed under the equipment.</p>
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">

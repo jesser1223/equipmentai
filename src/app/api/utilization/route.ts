@@ -58,6 +58,8 @@ export async function GET(req: Request) {
         const hours = Number(att.hours) || 0;
         if (hours <= 0 || !att.id) continue;
         if (attachmentId && att.id !== attachmentId) continue;
+        // Attachment hours also count toward the machine total
+        byEquipment[id].totalHours += hours;
         if (!byEquipment[id].attachments[att.id]) {
           byEquipment[id].attachments[att.id] = { id: att.id, name: att.name || "Attachment", totalHours: 0, jobCount: 0 };
         }
@@ -94,7 +96,7 @@ export async function GET(req: Request) {
     totalHours: Math.round(totalHours * 10) / 10,
     totalJobs,
     equipmentCount: equipment.length,
-    note: "Machine hours are actualHours from completed jobs only. Attachment hours are listed under the equipment and are not added to the machine. Utilization percentage is unavailable because available hours are not tracked.",
+    note: "Machine hours include actual equipment hours plus attachment hours used on that machine. Attachment hours are also listed under the equipment.",
     equipment,
   });
 }
