@@ -49,8 +49,17 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
 
   const apiKey = process.env.RESEND_API_KEY;
   const fromAddress = process.env.RESEND_FROM?.trim();
-  if (!apiKey || !fromAddress || fromAddress.endsWith("@resend.dev")) {
-    return NextResponse.json({ invoice: issued, email: { sent: false, skipped: "Email is not configured" } });
+  if (!apiKey || !fromAddress) {
+    return NextResponse.json({
+      invoice: issued,
+      email: { sent: false, skipped: "Email is not configured. Set RESEND_API_KEY and RESEND_FROM in Vercel, then redeploy." },
+    });
+  }
+  if (fromAddress.endsWith("@resend.dev")) {
+    return NextResponse.json({
+      invoice: issued,
+      email: { sent: false, skipped: "RESEND_FROM is still a Resend testing address. Set it to an address on your verified domain." },
+    });
   }
 
   const record = await prisma.invoiceEmail.create({
