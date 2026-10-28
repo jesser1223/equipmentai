@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 
   const jobs = await prisma.job.findMany({
     where,
-    include: { equipment: { select: { id: true, name: true, unitNumber: true, type: true } } },
+    include: { equipment: { select: { id: true, name: true, unitNumber: true, category: true } } },
   });
 
   const byEquipment: Record<string, { id: string; name: string; unitNumber: string; type: string; totalHours: number; jobCount: number; attachments: Record<string, { id: string; name: string; totalHours: number; jobCount: number }> }> = {};
