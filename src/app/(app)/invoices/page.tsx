@@ -464,6 +464,26 @@ export default function InvoicesPage() {
                     >
                       Download PDF
                     </a>
+                    {inv.status === "Draft" && (
+                      <button
+                        onClick={async () => {
+                          const res = await fetch(`/api/invoices/${inv.id}/issue`, { method: "POST" });
+                          const data = await res.json();
+                          if (!res.ok) {
+                            alert(data.error || "Could not issue invoice");
+                            return;
+                          }
+                          if (data.email?.sent) alert("Invoice issued and emailed.");
+                          else if (data.email?.skipped) alert(`Invoice issued. Email skipped: ${data.email.skipped}`);
+                          else if (data.email?.failed) alert(`Invoice issued. ${data.email.failed}`);
+                          else alert("Invoice issued.");
+                          load();
+                        }}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Issue
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setEmailTarget(inv);
