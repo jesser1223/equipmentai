@@ -7,10 +7,10 @@ const CLAIM_TTL_MS = 30 * 60 * 1000;
 
 function escapeHtml(value: string) {
   return value
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, """)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
     .replace(/\n/g, "<br/>");
 }
