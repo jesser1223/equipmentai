@@ -3,6 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
 
+const CLAIM_TTL_MS = 30 * 60 * 1000;
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, """)
+    .replace(/'/g, "&#39;")
+    .replace(/\n/g, "<br/>");
+}
+
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization");
@@ -23,17 +35,18 @@ export async function GET(req: Request) {
 
   const results: { invoiceId: string; status: string; detail?: string }[] = [];
   const now = new Date();
+  const staleBefore = new Date(now.getTime() - CLAIM_TTL_MS);
 
   for (const org of orgs) {
     const delay = org.overdueReminderDays || 7;
     const invoices = await prisma.invoice.findMany({
       where: {
         organizationId: org.id,
-        status: { in: ["Issued", "Partially Paid", "Overdue"] },
+        status: { in: ["Issued", "Partially Paid"] },
         dueDate: { not: null },
-        overdueReminderClaimedAt: null,
+        OR: [{ overdueReminderClaimedAt: null }, { overdueReminderClaimedAt: { lt: staleBefore } }],
       },
-      include: { customer: true, lines: true, payments: true, organization: true },
+      include: { customer: true, lines: true, payments: true, organization: true, emails: true },
     });
 
     for (const invoice of invoices) {
@@ -46,16 +59,35 @@ export async function GET(req: Request) {
       const balance = Math.max(0, invoice.total - paid);
       if (balance <= 0.009) continue;
 
+      const reminders = invoice.emails.filter((e) => e.type === "REMINDER");
+      if (reminders.some((e) => e.status === "Sent")) {
+        if (!invoice.overdueReminderClaimedAt) {
+          await prisma.invoice.update({ where: { id: invoice.id }, data: { overdueReminderClaimedAt: now } });
+        }
+        results.push({ invoiceId: invoice.id, status: "skipped", detail: "already sent" });
+        continue;
+      }
+      if (reminders.some((e) => e.status === "Queued" || e.status === "Uncertain")) {
+        await prisma.invoiceEmail.updateMany({
+          where: { invoiceId: invoice.id, type: "REMINDER", status: "Queued" },
+          data: { status: "Uncertain", error: "Outcome unknown after claim expiry. Not retried." },
+        });
+        results.push({ invoiceId: invoice.id, status: "uncertain", detail: "not retried" });
+        continue;
+      }
+
       const to = invoice.customer?.email?.trim();
-      if (!to) {
+      if (!to || !to.includes("@")) {
         results.push({ invoiceId: invoice.id, status: "skipped", detail: "no email" });
         continue;
       }
 
-      // Atomic claim so overlapping runs cannot double-send
       const claim = await prisma.invoice.updateMany({
-        where: { id: invoice.id, overdueReminderClaimedAt: null },
-        data: { overdueReminderClaimedAt: new Date() },
+        where: {
+          id: invoice.id,
+          OR: [{ overdueReminderClaimedAt: null }, { overdueReminderClaimedAt: { lt: staleBefore } }],
+        },
+        data: { overdueReminderClaimedAt: now },
       });
       if (claim.count !== 1) {
         results.push({ invoiceId: invoice.id, status: "skipped", detail: "already claimed" });
@@ -77,10 +109,11 @@ export async function GET(req: Request) {
       try {
         const resend = new Resend(apiKey);
         const pdf = await buildInvoicePdf(invoice);
-        const due = new Date(invoice.dueDate).toLocaleDateString();
-        const html = `<p>This is a reminder that invoice <strong>${invoice.number}</strong> is overdue.</p>
+        const due = escapeHtml(new Date(invoice.dueDate).toLocaleDateString());
+        const terms = org.paymentTerms ? `<p>${escapeHtml(org.paymentTerms)}</p>` : "";
+        const html = `<p>This is a reminder that invoice <strong>${escapeHtml(invoice.number)}</strong> is overdue.</p>
 <p>Due date: ${due}<br/>Outstanding balance: $${balance.toFixed(2)}</p>
-${org.paymentTerms ? `<p>${org.paymentTerms}</p>` : ""}
+${terms}
 <p>Please arrange payment at your earliest convenience.</p>`;
         const result = await resend.emails.send({
           from: `${org.name} <${fromAddress}>`,
@@ -105,12 +138,12 @@ ${org.paymentTerms ? `<p>${org.paymentTerms}</p>` : ""}
         });
         results.push({ invoiceId: invoice.id, status: "sent" });
       } catch (err: any) {
+        // Network/timeout after send may be ambiguous. Do not clear the claim.
         await prisma.invoiceEmail.update({
           where: { id: record.id },
-          data: { status: "Failed", error: err.message || "Send failed" },
+          data: { status: "Uncertain", error: err.message || "Send outcome unknown" },
         });
-        await prisma.invoice.update({ where: { id: invoice.id }, data: { overdueReminderClaimedAt: null } });
-        results.push({ invoiceId: invoice.id, status: "failed", detail: err.message });
+        results.push({ invoiceId: invoice.id, status: "uncertain", detail: err.message });
       }
     }
   }
