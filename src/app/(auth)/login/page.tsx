@@ -16,12 +16,23 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: true,
-      callbackUrl: "/",
-    });
+    try {
+      const res = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+        callbackUrl: "/",
+      });
+      if (!res || res.error || res.ok === false) {
+        setError("Incorrect email or password.");
+        return;
+      }
+      window.location.href = res.url || "/";
+    } catch {
+      setError("Incorrect email or password.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -36,7 +47,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={submit} className="space-y-4">
-          {error && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+          {error && (
+            <div role="alert" className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </div>
+          )}
 
           <div>
             <label className="text-xs font-medium text-muted-foreground">Email</label>
