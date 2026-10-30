@@ -123,6 +123,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       to,
       subject: finalSubject,
       status: "Queued",
+      type: "INVOICE",
       userId: (session?.user as any)?.id,
     },
   });

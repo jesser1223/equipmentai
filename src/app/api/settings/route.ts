@@ -58,6 +58,7 @@ export async function PATCH(req: Request) {
       invoiceFooter: body.invoiceFooter,
       replyToEmail: body.replyToEmail,
       autoSendInvoices: body.autoSendInvoices != null ? Boolean(body.autoSendInvoices) : undefined,
+      autoSendOverdueReminders: body.autoSendOverdueReminders != null ? Boolean(body.autoSendOverdueReminders) : undefined,
       overdueReminderDays,
       quoteFollowUpDays,
     },

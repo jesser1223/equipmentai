@@ -69,6 +69,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       to,
       subject: `Invoice ${issued.number} from ${org.name}`,
       status: "Queued",
+      type: "INVOICE",
       userId: (session?.user as any)?.id,
     },
   });

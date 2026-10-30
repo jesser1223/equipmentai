@@ -1,17 +1,30 @@
 ## Current Development Stage
-**Stage**: Audit — automatic invoice email "not configured"  
-**Date**: 2026-10-27  
-**Status**: Findings only. Issue route now returns the same specific config messages as the manual email route.
+**Stage**: Workflow Automation Batch 3 — Overdue Invoice Reminders  
+**Date**: 2026-10-29  
+**Status**: Implemented. Company setting autoSendOverdueReminders (default false). InvoiceEmail.type (INVOICE/REMINDER). Daily Vercel cron sends one reminder per eligible invoice. Atomic claim prevents duplicates. Failed sends clear the claim so they can retry. Payment status is never changed by the reminder.
 
-## Why email was skipped
-The issue route checks the same variables as the manual email route:
-- `RESEND_API_KEY`
-- `RESEND_FROM`
+## Schema
+- Organization.autoSendOverdueReminders Boolean @default(false)
+- Invoice.overdueReminderClaimedAt DateTime?
+- InvoiceEmail.type String @default("INVOICE")
 
-It skips when either is missing, or when `RESEND_FROM` ends with `@resend.dev`. The previous message lumped all three into "Email is not configured".
+Run: npx prisma db push
 
-## Required Vercel environment variables (Production)
-- `RESEND_API_KEY` = your Resend API key
-- `RESEND_FROM` = an address on your verified domain (not `...@resend.dev`)
+## Cron
+- Path: /api/cron/overdue-reminders
+- Schedule: 0 14 * * * (daily at 14:00 UTC)
+- Auth: Authorization: Bearer CRON_SECRET
 
-After setting or changing them, redeploy. The issue route does not call a different service; it uses the same Resend setup as manual send.
+## Env
+- CRON_SECRET (required)
+- RESEND_API_KEY and RESEND_FROM (already used)
+
+## Files
+- prisma/schema.prisma
+- src/app/api/cron/overdue-reminders/route.ts
+- src/app/api/settings/route.ts
+- src/app/(app)/settings/page.tsx
+- src/app/api/invoices/[id]/email/route.ts
+- src/app/api/invoices/[id]/issue/route.ts
+- vercel.json
+- PROGRESS.md

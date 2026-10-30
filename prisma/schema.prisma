@@ -29,9 +29,10 @@ model Organization {
   nextInvoiceNum Int      @default(1)
   defaultNotes   String?
   paymentTerms   String?
-  autoSendInvoices    Boolean @default(false)
-  overdueReminderDays Int     @default(7)
-  quoteFollowUpDays   Int     @default(3)
+  autoSendInvoices         Boolean @default(false)
+  autoSendOverdueReminders Boolean @default(false)
+  overdueReminderDays      Int     @default(7)
+  quoteFollowUpDays        Int     @default(3)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -279,6 +280,7 @@ model Invoice {
   total       Float    @default(0)
   amountPaid  Float    @default(0)
   notes       String?
+  overdueReminderClaimedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -302,6 +304,7 @@ model InvoiceEmail {
   to             String
   subject        String
   status         String   @default("Queued") // Queued, Sent, Failed
+  type           String   @default("INVOICE") // INVOICE, REMINDER
   providerId     String?
   error          String?
   createdAt      DateTime @default(now())

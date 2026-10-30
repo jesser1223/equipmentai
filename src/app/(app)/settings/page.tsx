@@ -50,14 +50,19 @@ export default function SettingsPage() {
 
         <div className="border-t border-border pt-4 space-y-3">
           <h2 className="text-sm font-semibold">Workflow Automation</h2>
-          <p className="text-xs text-muted-foreground">These preferences configure future automation. Reminders and follow-ups are not active yet.</p>
+          <p className="text-xs text-muted-foreground">These preferences control automation. Reminders only send when the reminder toggle is on.</p>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!org.autoSendInvoices} onChange={(e) => setOrg({ ...org, autoSendInvoices: e.target.checked })} />
             Automatically email invoices when issued
           </label>
-          <p className="text-[11px] text-muted-foreground -mt-2">Off by default. When enabled later, issued invoices can be emailed to the customer.</p>
+          <p className="text-[11px] text-muted-foreground -mt-2">Off by default. When on, issued invoices are emailed to the customer.</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!org.autoSendOverdueReminders} onChange={(e) => setOrg({ ...org, autoSendOverdueReminders: e.target.checked })} />
+            Automatically email overdue payment reminders
+          </label>
+          <p className="text-[11px] text-muted-foreground -mt-2">Off by default. Independent of invoice email. Sends one reminder after the delay below.</p>
           <Field label="Days after an invoice becomes overdue before sending a reminder" value={String(org.overdueReminderDays ?? 7)} onChange={(v) => setOrg({ ...org, overdueReminderDays: Number(v) })} />
-          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90. Reminders are not active yet.</p>
+          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90.</p>
           <Field label="Days to wait before following up on a sent quote" value={String(org.quoteFollowUpDays ?? 3)} onChange={(v) => setOrg({ ...org, quoteFollowUpDays: Number(v) })} />
           <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90. Quote follow-ups are not active yet.</p>
         </div>
