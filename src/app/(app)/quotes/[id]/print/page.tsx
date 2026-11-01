@@ -46,18 +46,21 @@ export default async function QuotePrintPage({ params }: { params: Promise<{ id:
           <strong>Bill to</strong>
           <div>{quote.customer.name}</div>
           <div>{quote.customer.company}</div>
+          <div>{quote.customer.email}</div>
+          <div>{quote.customer.phone}</div>
           <div>Job: {quote.jobName}</div>
           {quote.location && <div>Location: {quote.location}</div>}
         </div>
         <table>
           <thead>
-            <tr><th>Description</th><th>Type</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+            <tr><th>Description</th><th>Type</th><th>Method</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
           </thead>
           <tbody>
             {quote.lines.map((line) => (
               <tr key={line.id}>
                 <td>{line.description}</td>
                 <td>{line.lineType === "attachment" ? "Attachment" : line.lineType === "equipment" ? "Equipment" : "Custom"}</td>
+                <td>{line.billingMethod || "—"}</td>
                 <td>{line.quantity} {line.unit}</td>
                 <td>${line.rate.toFixed(2)}</td>
                 <td>${line.amount.toFixed(2)}</td>

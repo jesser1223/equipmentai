@@ -31,19 +31,21 @@ export async function buildQuotePdf(quote: any): Promise<Uint8Array> {
 
   y -= 10;
   page.drawText("Description", { x: left, y, size: 9, font: bold });
-  page.drawText("Qty", { x: 340, y, size: 9, font: bold });
-  page.drawText("Rate", { x: 400, y, size: 9, font: bold });
-  page.drawText("Amount", { x: 480, y, size: 9, font: bold });
+  page.drawText("Method", { x: 280, y, size: 9, font: bold });
+  page.drawText("Qty", { x: 360, y, size: 9, font: bold });
+  page.drawText("Rate", { x: 420, y, size: 9, font: bold });
+  page.drawText("Amount", { x: 490, y, size: 9, font: bold });
   y -= 8;
   page.drawLine({ start: { x: left, y }, end: { x: 562, y }, thickness: 0.5, color: rgb(0.8, 0.8, 0.8) });
   y -= 16;
 
   for (const line of quote.lines || []) {
     const label = line.lineType === "attachment" ? `${line.description} (attachment)` : line.description;
-    page.drawText(String(label).slice(0, 48), { x: left, y, size: 9, font });
-    page.drawText(String(line.quantity), { x: 340, y, size: 9, font });
-    page.drawText(`$${Number(line.rate).toFixed(2)}`, { x: 400, y, size: 9, font });
-    page.drawText(`$${Number(line.amount).toFixed(2)}`, { x: 480, y, size: 9, font });
+    page.drawText(String(label).slice(0, 36), { x: left, y, size: 9, font });
+    page.drawText(String(line.billingMethod || "").slice(0, 10), { x: 280, y, size: 9, font });
+    page.drawText(String(line.quantity), { x: 360, y, size: 9, font });
+    page.drawText(`$${Number(line.rate).toFixed(2)}`, { x: 420, y, size: 9, font });
+    page.drawText(`$${Number(line.amount).toFixed(2)}`, { x: 490, y, size: 9, font });
     y -= 14;
   }
 
