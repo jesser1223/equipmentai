@@ -17,6 +17,7 @@ export default function QuotesPage() {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [toDelete, setToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
   const [editTarget, setEditTarget] = useState<any>(null);
   const [convertTarget, setConvertTarget] = useState<any>(null);
   const [convertForm, setConvertForm] = useState({ startDate: "", endDate: "", equipmentId: "", location: "" });
