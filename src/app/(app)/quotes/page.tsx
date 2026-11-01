@@ -7,8 +7,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { normalizeTaxRate, quoteTaxAmount, quoteTotal } from "@/lib/quotes";
 
 type Customer = { id: string; name: string };
-type Equipment = { id: string; name: string; unitNumber: string; hourlyRate: number };
-type Line = { equipmentId: string; description: string; quantity: number; rate: number; amount: number };
+type Equipment = { id: string; name: string; unitNumber: string; hourlyRate: number; attachments?: { id: string; name: string; rate: number; billingMethod?: string }[] };
+type Line = { equipmentId: string; attachmentId: string; description: string; quantity: number; rate: number; amount: number; lineType: string; billingMethod: string; unit: string };
 
 export default function QuotesPage() {
   const [quotes, setQuotes] = useState<any[]>([]);
@@ -258,12 +258,16 @@ function QuoteForm({
     initial?.lines?.length
       ? initial.lines.map((l: any) => ({
           equipmentId: l.equipmentId || "",
+          attachmentId: l.attachmentId || "",
           description: l.description || "",
           quantity: l.quantity || 1,
           rate: l.rate || 0,
           amount: l.amount || 0,
+          lineType: l.lineType || (l.attachmentId ? "attachment" : l.equipmentId ? "equipment" : "custom"),
+          billingMethod: l.billingMethod || "",
+          unit: l.unit || "hours",
         }))
-      : [{ equipmentId: "", description: "", quantity: 1, rate: 0, amount: 0 }]
+      : [{ equipmentId: "", attachmentId: "", description: "", quantity: 1, rate: 0, amount: 0, lineType: "custom", billingMethod: "", unit: "hours" }]
   );
   const [taxRate, setTaxRate] = useState(normalizeTaxRate(Number(initial?.taxRate) || 0));
   const [error, setError] = useState("");
@@ -277,10 +281,26 @@ function QuoteForm({
         const eq = equipment.find((e) => e.id === patch.equipmentId);
         if (eq) {
           line.description = eq.name;
-          line.rate = eq.hourlyRate;
+          line.rate = eq.hourlyRate || 0;
+          line.lineType = "equipment";
+          line.billingMethod = "hourly";
+          line.attachmentId = "";
         }
       }
-      line.amount = (line.quantity || 0) * (line.rate || 0);
+      if (patch.attachmentId) {
+        const eq = equipment.find((e) => e.id === line.equipmentId);
+        const att = eq?.attachments?.find((a) => a.id === patch.attachmentId);
+        if (att) {
+          line.description = att.name;
+          line.rate = att.rate || 0;
+          line.lineType = "attachment";
+          line.billingMethod = att.billingMethod || "hourly";
+          line.unit = att.billingMethod === "daily" ? "days" : att.billingMethod === "per-job" ? "job" : "hours";
+        }
+      }
+      const qty = line.billingMethod === "per-job" ? 1 : (line.quantity || 0);
+      line.quantity = qty;
+      line.amount = line.billingMethod === "per-job" ? (line.rate || 0) : qty * (line.rate || 0);
       next[idx] = line;
       return next;
     });
@@ -349,41 +369,66 @@ function QuoteForm({
 
       <div className="space-y-2">
         <div className="text-sm font-medium">Line Items</div>
-        {lines.map((line, i) => (
-          <div key={i} className="grid grid-cols-12 gap-2 items-end">
-            <select
-              value={line.equipmentId}
-              onChange={(e) => updateLine(i, { equipmentId: e.target.value })}
-              className="col-span-4 rounded border border-border bg-background px-2 py-1 text-sm"
-            >
-              <option value="">— Select equipment —</option>
-              {equipment.map((eq) => (
-                <option key={eq.id} value={eq.id}>{eq.name} ({eq.unitNumber})</option>
-              ))}
-            </select>
-            <input
-              value={line.quantity}
-              type="number"
-              onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
-              className="col-span-2 rounded border border-border bg-background px-2 py-1 text-sm"
-              placeholder="Qty"
-            />
-            <input
-              value={line.rate}
-              type="number"
-              onChange={(e) => updateLine(i, { rate: Number(e.target.value) })}
-              className="col-span-2 rounded border border-border bg-background px-2 py-1 text-sm"
-              placeholder="Rate"
-            />
-            <div className="col-span-3 text-sm">${line.amount.toFixed(2)}</div>
-            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-muted-foreground hover:text-danger">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
+        {lines.map((line, i) => {
+          const eq = equipment.find((e) => e.id === line.equipmentId);
+          const atts = eq?.attachments || [];
+          const unitLabel = line.billingMethod === "daily" ? "/day" : line.billingMethod === "per-job" ? "/job" : "/hour";
+          return (
+            <div key={i} className="rounded border border-border p-2 space-y-2">
+              <div className="grid grid-cols-12 gap-2 items-end">
+                <select
+                  value={line.equipmentId}
+                  onChange={(e) => updateLine(i, { equipmentId: e.target.value })}
+                  className="col-span-4 rounded border border-border bg-background px-2 py-1 text-sm"
+                >
+                  <option value="">— Select equipment —</option>
+                  {equipment.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name} ({item.unitNumber})</option>
+                  ))}
+                </select>
+                <select
+                  value={line.attachmentId}
+                  onChange={(e) => updateLine(i, { attachmentId: e.target.value })}
+                  className="col-span-3 rounded border border-border bg-background px-2 py-1 text-sm"
+                  disabled={!atts.length}
+                >
+                  <option value="">Equipment line</option>
+                  {atts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+                <input
+                  value={line.quantity}
+                  type="number"
+                  onChange={(e) => updateLine(i, { quantity: Number(e.target.value) })}
+                  className="col-span-2 rounded border border-border bg-background px-2 py-1 text-sm"
+                  placeholder="Qty"
+                />
+                <input
+                  value={line.rate}
+                  type="number"
+                  onChange={(e) => updateLine(i, { rate: Number(e.target.value) })}
+                  className="col-span-2 rounded border border-border bg-background px-2 py-1 text-sm"
+                  placeholder="Rate"
+                />
+                <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-muted-foreground hover:text-danger">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>
+                  {line.lineType === "attachment" ? "Attachment" : line.lineType === "equipment" ? "Equipment" : "Custom"}
+                  {line.billingMethod ? ` · ${line.billingMethod}` : ""}
+                  {line.rate > 0 ? ` · $${line.rate}${unitLabel}` : " · rate not set"}
+                </span>
+                <span>${line.amount.toFixed(2)}</span>
+              </div>
+            </div>
+          );
+        })}
         <button
           type="button"
-          onClick={() => setLines([...lines, { equipmentId: "", description: "", quantity: 1, rate: 0, amount: 0 }])}
+          onClick={() => setLines([...lines, { equipmentId: "", attachmentId: "", description: "", quantity: 1, rate: 0, amount: 0, lineType: "custom", billingMethod: "", unit: "hours" }])}
           className="text-xs text-accent"
         >
           + Add line

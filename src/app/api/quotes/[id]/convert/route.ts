@@ -48,6 +48,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           location: check.location,
           notes: body.notes ?? quote.notes,
           status: "Scheduled",
+          quotedEquipmentRate: quote.lines.find((l) => l.lineType === "equipment")?.rate ?? null,
+          attachmentUsage: quote.lines
+            .filter((l) => l.lineType === "attachment" && l.attachmentId)
+            .map((l) => ({
+              id: l.attachmentId,
+              name: l.attachmentName || l.description,
+              rate: l.rate,
+              hours: l.quantity,
+              billingMethod: l.billingMethod,
+            })),
         },
         include: { customer: true, equipment: true, quote: true },
       });

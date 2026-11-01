@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { quoteTaxAmount, quoteTotal, normalizeTaxRate } from "@/lib/quotes";
+import { normalizeQuoteLines } from "@/lib/quote-lines";
 
 export async function GET() {
   const session = await auth();
@@ -31,8 +32,8 @@ export async function POST(req: Request) {
     const count = await prisma.quote.count({ where: { organizationId: orgId } });
     const number = `Q-${String(count + 1).padStart(4, "0")}`;
 
-    const lines = body.lines || [];
-    const subtotal = Math.round(lines.reduce((sum: number, l: any) => sum + (Number(l.quantity) || 0) * (Number(l.rate) || 0), 0) * 100) / 100;
+    const lines = await normalizeQuoteLines(orgId, body.lines || []);
+    const subtotal = Math.round(lines.reduce((sum, l) => sum + l.amount, 0) * 100) / 100;
     const taxRate = normalizeTaxRate(Number(body.taxRate) || 0);
     const taxAmount = quoteTaxAmount(subtotal, taxRate);
     const total = quoteTotal(subtotal, taxRate);
@@ -52,12 +53,17 @@ export async function POST(req: Request) {
         organization: { connect: { id: orgId } },
         customer: { connect: { id: body.customerId } },
         lines: {
-          create: lines.map((l: any) => ({
+          create: lines.map((l) => ({
             description: l.description,
-            quantity: Number(l.quantity) || 1,
-            unit: l.unit || "hours",
-            rate: Number(l.rate) || 0,
-            amount: Number(l.amount) || 0,
+            quantity: l.quantity,
+            unit: l.unit,
+            rate: l.rate,
+            amount: l.amount,
+            equipmentId: l.equipmentId,
+            attachmentId: l.attachmentId,
+            lineType: l.lineType,
+            billingMethod: l.billingMethod,
+            attachmentName: l.attachmentName,
           })),
         },
       },

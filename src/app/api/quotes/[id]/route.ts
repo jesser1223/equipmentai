@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { normalizeTaxRate, quoteTaxAmount, quoteTotal, quoteTransitionError } from "@/lib/quotes";
+import { normalizeQuoteLines } from "@/lib/quote-lines";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -48,23 +49,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ error: "Add at least one line." }, { status: 400 });
   }
 
-  let lines: { description: string; quantity: number; unit: string; rate: number; amount: number; equipmentId: string | null }[];
+  let lines;
   try {
-    lines = incoming.map((line: any) => {
-      const quantity = Number(line.quantity) || 0;
-      const rate = Number(line.rate) || 0;
-      if (!line.description || quantity <= 0 || rate < 0) {
-        throw new Error("Each line needs a description, quantity greater than zero, and a valid rate.");
-      }
-      return {
-        description: String(line.description).trim(),
-        quantity,
-        unit: line.unit || "hours",
-        rate,
-        amount: Math.round(quantity * rate * 100) / 100,
-        equipmentId: line.equipmentId || null,
-      };
-    });
+    lines = await normalizeQuoteLines(orgId, incoming);
   } catch (err: any) {
     return NextResponse.json({ error: err.message || "Invalid line items." }, { status: 400 });
   }

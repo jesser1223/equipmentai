@@ -39,7 +39,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const calc = calculateJobCharges({
     equipmentName: job.equipment?.name,
     equipmentUnit: job.equipment?.unitNumber,
-    equipmentRate: job.equipment?.hourlyRate,
+    equipmentRate: job.quotedEquipmentRate ?? job.equipment?.hourlyRate,
     actualHours: job.actualHours,
     attachments,
     fuelCost: job.fuelCost,
