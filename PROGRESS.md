@@ -1,16 +1,11 @@
 ## Current Development Stage
-**Stage**: Quote attachment pricing Stage 1  
+**Stage**: Quote historical pricing fix  
 **Date**: 2026-11-01  
-**Status**: Quote lines can store attachment id, name, billing method, rate, quantity, and amount. Server calculates totals. Conversion copies quoted attachment rates into job.attachmentUsage and quoted equipment rate onto the job. Invoice draft prefers the quoted equipment rate.
+**Status**: Invoice draft no longer falls back to the current equipment hourly rate. Missing quoted rate returns a clear error. Attachment usage snapshot now includes quantity, unit, and amount.
 
-## Schema
-- QuoteLine.attachmentId, lineType, billingMethod, attachmentName
-- Job.quotedEquipmentRate
+## Minimum billing
+Not implemented. Attachment billing methods in the schema are hourly, daily, and per-job only. No minimum-charge rule exists elsewhere.
 
-Run: npx prisma db push
-
-## Billing
-- hourly: quantity x rate
-- daily: quantity (days) x rate
-- per-job: rate once
-- Missing attachment rate is rejected server-side
+## Database
+No .env in this environment. prisma db push was not run here. Run it locally:
+npx prisma db push

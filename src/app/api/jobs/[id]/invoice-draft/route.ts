@@ -32,14 +32,21 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
         id: a.id,
         name: a.name,
         rate: Number(a.rate) || 0,
-        hours: Number(a.hours) || 0,
+        hours: Number(a.hours ?? a.quantity) || 0,
       }))
     : [];
+
+  if (job.equipmentId && job.quotedEquipmentRate == null) {
+    return NextResponse.json({
+      error: "Cannot create draft. This job has no saved quoted equipment rate. Historical pricing was not stored.",
+      missing: ["quoted equipment rate"],
+    }, { status: 400 });
+  }
 
   const calc = calculateJobCharges({
     equipmentName: job.equipment?.name,
     equipmentUnit: job.equipment?.unitNumber,
-    equipmentRate: job.quotedEquipmentRate ?? job.equipment?.hourlyRate,
+    equipmentRate: job.quotedEquipmentRate ?? undefined,
     actualHours: job.actualHours,
     attachments,
     fuelCost: job.fuelCost,
