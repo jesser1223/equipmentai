@@ -77,6 +77,8 @@ export default function QuotesPage() {
       setTimeout(() => frame.remove(), 1000);
     };
   };
+
+  const openConvert = (quote: any) => {
     setConvertTarget(quote);
     setConvertError("");
     setConvertForm({
