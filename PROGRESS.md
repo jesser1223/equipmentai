@@ -1,15 +1,19 @@
 ## Current Development Stage
-**Stage**: Batch 3 hardening  
-**Date**: 2026-10-29  
-**Status**: Claim expiry (30 minutes), uncertain outcome handling, HTML escaping, Overdue removed from eligibility. Installed Resend SDK has no idempotency-key option. Exactly-once delivery is not guaranteed.
+**Stage**: Workflow Automation Batch 4 — Quote Follow-Ups  
+**Date**: 2026-10-31  
+**Status**: Implemented. Quote must be emailed successfully first. Follow-up toggle default off. One follow-up per quote. Optional expiresAt; no invented expiration.
 
-## Claim recovery
-- Active claim (under 30 minutes) cannot be taken by another run.
-- Expired claim with no reminder email can be reclaimed.
-- Expired claim with Queued reminder is marked Uncertain and is not resent.
-- Confirmed Resend failure clears the claim for retry.
-- Thrown send errors are marked Uncertain and the claim is kept.
+## Schema
+- Organization.autoSendQuoteFollowUps Boolean @default(false)
+- Quote.sentAt, expiresAt, followUpClaimedAt
+- QuoteEmail model (QUOTE / FOLLOWUP)
 
-## Tests run here
-- Eligibility unit checks: passed (Issued/Partially Paid eligible; Draft/Paid/Void/zero/no-email skipped)
-- Typecheck, ESLint, production build, Prisma validate: not executed (tooling incomplete in this environment)
+Run: npx prisma db push
+
+## Cron
+- /api/cron/quote-followups at 15 14 * * *
+- Existing overdue cron preserved
+- Auth: Authorization Bearer CRON_SECRET
+
+## Original email
+POST /api/quotes/[id]/email records QuoteEmail type QUOTE and sets sentAt only after Resend accepts.

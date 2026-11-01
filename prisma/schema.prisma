@@ -31,6 +31,7 @@ model Organization {
   paymentTerms   String?
   autoSendInvoices         Boolean @default(false)
   autoSendOverdueReminders Boolean @default(false)
+  autoSendQuoteFollowUps   Boolean @default(false)
   overdueReminderDays      Int     @default(7)
   quoteFollowUpDays        Int     @default(3)
   createdAt      DateTime @default(now())
@@ -57,6 +58,7 @@ model Organization {
   supplies       Supply[]
   auditLogs      AuditLog[]
   invoiceEmails  InvoiceEmail[]
+  quoteEmails    QuoteEmail[]
   maintenanceRecords MaintenanceRecord[]
   stripeEvents   StripeEvent[]
 }
@@ -208,6 +210,9 @@ model Quote {
   taxRate     Float    @default(0)
   taxAmount   Float    @default(0)
   total       Float    @default(0)
+  sentAt      DateTime?
+  expiresAt   DateTime?
+  followUpClaimedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -217,7 +222,27 @@ model Quote {
   customerId  String
   customer    Customer @relation(fields: [customerId], references: [id])
   lines       QuoteLine[]
+  emails      QuoteEmail[]
   job         Job?
+}
+
+model QuoteEmail {
+  id             String   @id @default(cuid())
+  to             String
+  subject        String
+  status         String   @default("Queued") // Queued, Sent, Failed, Uncertain
+  type           String   @default("QUOTE") // QUOTE, FOLLOWUP
+  providerId     String?
+  error          String?
+  createdAt      DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  quoteId        String
+  quote          Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  userId         String?
+
+  @@index([quoteId])
 }
 
 model QuoteLine {

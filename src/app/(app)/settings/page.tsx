@@ -64,7 +64,12 @@ export default function SettingsPage() {
           <Field label="Days after an invoice becomes overdue before sending a reminder" value={String(org.overdueReminderDays ?? 7)} onChange={(v) => setOrg({ ...org, overdueReminderDays: Number(v) })} />
           <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90.</p>
           <Field label="Days to wait before following up on a sent quote" value={String(org.quoteFollowUpDays ?? 3)} onChange={(v) => setOrg({ ...org, quoteFollowUpDays: Number(v) })} />
-          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90. Quote follow-ups are not active yet.</p>
+          <p className="text-[11px] text-muted-foreground -mt-2">Whole number from 1 to 90.</p>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!org.autoSendQuoteFollowUps} onChange={(e) => setOrg({ ...org, autoSendQuoteFollowUps: e.target.checked })} />
+            Automatically email quote follow-ups
+          </label>
+          <p className="text-[11px] text-muted-foreground -mt-2">Off by default. Sends one follow-up after a quote was emailed and the delay above has passed.</p>
         </div>
 
         <button disabled={saving} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground disabled:opacity-50">
