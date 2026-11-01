@@ -22,7 +22,9 @@ export default function QuotesPage() {
   const [convertForm, setConvertForm] = useState({ startDate: "", endDate: "", equipmentId: "", location: "" });
   const [converting, setConverting] = useState(false);
   const [convertError, setConvertError] = useState("");
-  const [deleting, setDeleting] = useState(false);
+  const [emailTarget, setEmailTarget] = useState<any>(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailing, setEmailing] = useState(false);
 
   const setStatus = async (quote: any, status: string) => {
     const res = await fetch(`/api/quotes/${quote.id}`, {
@@ -39,7 +41,42 @@ export default function QuotesPage() {
     load();
   };
 
-  const openConvert = (quote: any) => {
+  const sendQuote = async () => {
+    if (!emailTarget) return;
+    setEmailing(true);
+    const res = await fetch(`/api/quotes/${emailTarget.id}/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: emailTo }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setEmailing(false);
+    if (!res.ok) {
+      setToast(data.error || "Could not email quote");
+    } else {
+      setToast("Quote emailed");
+      setEmailTarget(null);
+      load();
+    }
+    setTimeout(() => setToast(""), 2500);
+  };
+
+  const printQuote = (quote: any) => {
+    const frame = document.createElement("iframe");
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    frame.src = `/quotes/${quote.id}/print`;
+    document.body.appendChild(frame);
+    frame.onload = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+      setTimeout(() => frame.remove(), 1000);
+    };
+  };
     setConvertTarget(quote);
     setConvertError("");
     setConvertForm({
@@ -122,6 +159,18 @@ export default function QuotesPage() {
                           <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                         </button>
                       )}
+                      <button
+                        onClick={() => {
+                          setEmailTarget(q);
+                          setEmailTo(q.customer?.email || "");
+                        }}
+                        className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5"
+                      >
+                        Email Quote
+                      </button>
+                      <button onClick={() => printQuote(q)} className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-white/5">
+                        Print Quote
+                      </button>
                       <button onClick={() => setToDelete(q)} className="text-muted-foreground hover:text-danger">
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -162,6 +211,19 @@ export default function QuotesPage() {
         />
       </Modal>
 
+      <Modal open={!!emailTarget} onClose={() => !emailing && setEmailTarget(null)} title={`Email ${emailTarget?.number || "quote"}`}>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Review the recipient. The quote PDF is attached. Nothing is sent until you confirm.</p>
+          <label className="text-xs text-muted-foreground">Recipient</label>
+          <input value={emailTo} onChange={(e) => setEmailTo(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setEmailTarget(null)} className="rounded-lg border border-border px-3 py-2 text-sm">Cancel</button>
+            <button type="button" disabled={emailing || !emailTo.includes("@")} onClick={sendQuote} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
+              {emailing ? "Sending…" : "Send quote"}
+            </button>
+          </div>
+        </div>
+      </Modal>
       <ConfirmDialog
         open={!!toDelete}
         title="Delete quote?"
@@ -409,7 +471,8 @@ function QuoteForm({
                   type="number"
                   onChange={(e) => updateLine(i, { rate: Number(e.target.value) })}
                   className="col-span-2 rounded border border-border bg-background px-2 py-1 text-sm"
-                  placeholder="Rate"
+                  placeholder={line.attachmentId ? "Attachment rate" : "Rate"}
+                  aria-label={line.attachmentId ? "Attachment rate" : "Rate"}
                 />
                 <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))} className="col-span-1 text-muted-foreground hover:text-danger">
                   <Trash2 className="h-4 w-4" />

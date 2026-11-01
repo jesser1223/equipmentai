@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
+import { buildQuotePdf } from "@/lib/quote-pdf";
 
 function escapeHtml(value: string) {
   return value
@@ -64,12 +65,14 @@ ${quote.notes ? `<p>${escapeHtml(quote.notes)}</p>` : ""}
 
   try {
     const resend = new Resend(apiKey);
+    const pdf = await buildQuotePdf(quote);
     const result = await resend.emails.send({
       from: `${quote.organization.name} <${fromAddress}>`,
       to,
       replyTo: quote.organization.replyToEmail || quote.organization.email || undefined,
       subject,
       html,
+      attachments: [{ filename: `${quote.number}.pdf`, content: Buffer.from(pdf) }],
     });
     if (result.error) {
       await prisma.quoteEmail.update({
