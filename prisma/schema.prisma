@@ -383,7 +383,6 @@ model InvoiceLine {
 
   invoiceId   String
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  emails      InvoiceEmail[]
 }
 
 model Payment {
