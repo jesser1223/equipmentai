@@ -525,19 +525,19 @@ export default function InvoicesPage() {
                     )}
                     {inv.status !== "Paid" && inv.status !== "Void" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
-                      {inv.payments?.length > 0 && (
-                        <button
-                          onClick={() => {
-                            const latest = [...inv.payments].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-                            setReceiptTarget({ invoice: inv, paymentId: latest.id });
-                            setReceiptTo(inv.customer?.email || "");
-                            setReceiptError("");
-                          }}
-                          className="text-xs text-muted-foreground"
-                        >
-                          Email receipt
-                        </button>
-                      )}
+                    )}
+                    {inv.payments?.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const latest = [...inv.payments].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                          setReceiptTarget({ invoice: inv, paymentId: latest.id });
+                          setReceiptTo(inv.customer?.email || "");
+                          setReceiptError("");
+                        }}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Email receipt
+                      </button>
                     )}
                     <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
                   </td>
