@@ -346,8 +346,11 @@ model InvoiceEmail {
   invoiceId      String
   invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   userId         String?
+  paymentId      String?
+  payment        Payment? @relation(fields: [paymentId], references: [id])
 
   @@index([invoiceId])
+  @@index([paymentId])
 }
 
 model Supply {
@@ -380,6 +383,7 @@ model InvoiceLine {
 
   invoiceId   String
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  emails      InvoiceEmail[]
 }
 
 model Payment {
@@ -393,6 +397,7 @@ model Payment {
 
   invoiceId   String
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  emails      InvoiceEmail[]
 }
 
 model StripeEvent {

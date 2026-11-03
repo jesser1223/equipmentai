@@ -30,7 +30,10 @@ export default function InvoicesPage() {
   const [emailTo, setEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailing, setEmailing] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState(false);
+  const [receiptTarget, setReceiptTarget] = useState<{ invoice: any; paymentId: string } | null>(null);
+  const [receiptTo, setReceiptTo] = useState("");
+  const [receipting, setReceipting] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [taxRate, setTaxRate] = useState(0.05);
   const [formError, setFormError] = useState("");
@@ -203,14 +206,25 @@ export default function InvoicesPage() {
   const pay = async () => {
     if (!payTarget || !payAmount) return;
     setPaying(true);
-    await fetch(`/api/invoices/${payTarget.id}/payments`, {
+    const res = await fetch(`/api/invoices/${payTarget.id}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: Number(payAmount), method: "Manual" }),
     });
+    const data = await res.json().catch(() => ({}));
     setPaying(false);
+    if (!res.ok) {
+      setIssueResult({ title: "Payment failed", message: data.error || "Could not record payment", tone: "error" });
+      return;
+    }
+    const payment = [...(data.payments || [])].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     setPayTarget(null);
     setPayAmount("");
+    if (payment) {
+      setReceiptTarget({ invoice: data, paymentId: payment.id });
+      setReceiptTo(payTarget.customer?.email || "");
+      setReceiptError("");
+    }
     load();
   };
 
@@ -511,6 +525,19 @@ export default function InvoicesPage() {
                     )}
                     {inv.status !== "Paid" && inv.status !== "Void" && (
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
+                      {inv.payments?.length > 0 && (
+                        <button
+                          onClick={() => {
+                            const latest = [...inv.payments].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                            setReceiptTarget({ invoice: inv, paymentId: latest.id });
+                            setReceiptTo(inv.customer?.email || "");
+                            setReceiptError("");
+                          }}
+                          className="text-xs text-muted-foreground"
+                        >
+                          Email receipt
+                        </button>
+                      )}
                     )}
                     <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
                   </td>
@@ -717,6 +744,41 @@ export default function InvoicesPage() {
             <button onClick={() => setPayTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
             <button onClick={pay} disabled={paying || !payAmount} className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50">
               {paying ? "Saving…" : "Record"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal open={!!receiptTarget} onClose={() => !receipting && setReceiptTarget(null)} title="Email receipt">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Payment recorded. Review the recipient before sending the receipt. Nothing is sent until you confirm.</p>
+          <input value={receiptTo} onChange={(e) => setReceiptTo(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+          {receiptError && <p className="text-sm text-red-400">{receiptError}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setReceiptTarget(null)} className="rounded-lg border border-border px-4 py-2 text-sm">Skip</button>
+            <button
+              disabled={receipting || !receiptTo.includes("@")}
+              onClick={async () => {
+                if (!receiptTarget) return;
+                setReceipting(true);
+                setReceiptError("");
+                const res = await fetch(`/api/invoices/${receiptTarget.invoice.id}/payments/${receiptTarget.paymentId}/receipt`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ to: receiptTo }),
+                });
+                const data = await res.json().catch(() => ({}));
+                setReceipting(false);
+                if (!res.ok) {
+                  setReceiptError(data.error || "Could not send receipt");
+                  return;
+                }
+                setReceiptTarget(null);
+                setEmailSuccess(true);
+                setTimeout(() => setEmailSuccess(false), 3000);
+              }}
+              className="rounded-lg bg-accent px-4 py-2 text-sm text-accent-foreground disabled:opacity-50"
+            >
+              {receipting ? "Sending…" : "Send receipt"}
             </button>
           </div>
         </div>

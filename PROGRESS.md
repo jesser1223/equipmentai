@@ -1,11 +1,12 @@
 ## Current Development Stage
-**Stage**: Quote historical pricing fix  
-**Date**: 2026-11-01  
-**Status**: Invoice draft no longer falls back to the current equipment hourly rate. Missing quoted rate returns a clear error. Attachment usage snapshot now includes quantity, unit, and amount.
+**Stage**: Batch 6 payment receipts  
+**Date**: 2026-11-03  
+**Status**: Optional receipt email after a payment is recorded. Does not send automatically. Does not change payment math.
 
-## Minimum billing
-Not implemented. Attachment billing methods in the schema are hourly, daily, and per-job only. No minimum-charge rule exists elsewhere.
+## Schema
+InvoiceEmail.paymentId optional. Type RECEIPT.
 
-## Database
-No .env in this environment. prisma db push was not run here. Run it locally:
-npx prisma db push
+Run: npx prisma db push
+
+## Balance
+Remaining balance is invoice total minus payments recorded through the selected payment.
