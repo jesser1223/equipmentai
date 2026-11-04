@@ -41,6 +41,13 @@ export default function EquipmentPage() {
   const [editing, setEditing] = useState<any>(null);
   const [toast, setToast] = useState("");
 
+  const [docTarget, setDocTarget] = useState<Equipment | null>(null);
+  const [docs, setDocs] = useState<any[]>([]);
+  const [docName, setDocName] = useState("");
+  const [docCategory, setDocCategory] = useState("Other");
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docError, setDocError] = useState("");
+  const [docBusy, setDocBusy] = useState(false);
   const [toDelete, setToDelete] = useState<Equipment | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -86,6 +93,43 @@ export default function EquipmentPage() {
     setToast(editing ? "Equipment updated" : "Equipment saved");
     setTimeout(() => setToast(""), 2500);
     load();
+  };
+
+  const openDocs = async (eq: Equipment) => {
+    setDocTarget(eq);
+    setDocError("");
+    const res = await fetch(`/api/equipment/${eq.id}/documents`);
+    const data = await res.json().catch(() => []);
+    setDocs(Array.isArray(data) ? data : []);
+  };
+
+  const uploadDoc = async () => {
+    if (!docTarget || !docFile || !docName.trim()) {
+      setDocError("Name and PDF are required.");
+      return;
+    }
+    setDocBusy(true);
+    setDocError("");
+    const body = new FormData();
+    body.set("name", docName.trim());
+    body.set("category", docCategory);
+    body.set("file", docFile);
+    const res = await fetch(`/api/equipment/${docTarget.id}/documents`, { method: "POST", body });
+    const data = await res.json().catch(() => ({}));
+    setDocBusy(false);
+    if (!res.ok) {
+      setDocError(data.error || "Upload failed");
+      return;
+    }
+    setDocName("");
+    setDocFile(null);
+    openDocs(docTarget);
+  };
+
+  const removeDoc = async (docId: string) => {
+    if (!docTarget) return;
+    const res = await fetch(`/api/equipment/${docTarget.id}/documents/${docId}`, { method: "DELETE" });
+    if (res.ok) openDocs(docTarget);
   };
 
   const confirmDelete = async () => {
@@ -183,6 +227,12 @@ export default function EquipmentPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        onClick={() => openDocs(eq)}
+                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent hover:bg-accent/10"
+                      >
+                        Documents
+                      </button>
+                      <button
                         onClick={() => {
                           setEditing(eq);
                           setModalOpen(true);
@@ -236,6 +286,39 @@ export default function EquipmentPage() {
         />
       </Modal>
 
+      <Modal open={!!docTarget} onClose={() => setDocTarget(null)} title={`Documents · ${docTarget?.name || ""}`}>
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
+              {["Insurance", "Pre-trip inspection", "Inspection report", "Maintenance record", "Ownership", "Safety certificate", "Operator manual", "Other"].map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="text-sm" />
+          {docError && <p className="text-sm text-red-400">{docError}</p>}
+          <button onClick={uploadDoc} disabled={docBusy} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
+            {docBusy ? "Uploading…" : "Upload PDF"}
+          </button>
+          {docs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No documents yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {docs.map((doc) => (
+                <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2 text-sm">
+                  <div>
+                    <div>{doc.name} · PDF</div>
+                    <div className="text-xs text-muted-foreground">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()} · {(doc.size / 1024).toFixed(0)} KB</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={`/api/equipment/${docTarget?.id}/documents/${doc.id}`} target="_blank" className="text-xs text-accent">View</a>
+                    <button onClick={() => removeDoc(doc.id)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => {

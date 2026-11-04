@@ -451,6 +451,7 @@ export default function InvoicesPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {invoices.map((inv) => (
+                <>
                 <tr key={inv.id} className="hover:bg-white/5">
                   <td className="px-4 py-3 font-medium">{inv.number}</td>
                   <td className="px-4 py-3">{inv.customer?.name}</td>
@@ -581,6 +582,7 @@ export default function InvoicesPage() {
                     </td>
                   </tr>
                 )}
+                </>
               ))}
             </tbody>
           </table>
