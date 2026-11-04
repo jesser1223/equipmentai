@@ -530,13 +530,57 @@ export default function InvoicesPage() {
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
                     {inv.payments?.length > 0 && (
-                      <button onClick={() => setHistoryTarget(inv)} className="text-xs text-muted-foreground">
-                        Payments
+                      <button
+                        onClick={() => setHistoryTarget(historyTarget?.id === inv.id ? null : inv)}
+                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent hover:bg-accent/10"
+                        aria-expanded={historyTarget?.id === inv.id}
+                      >
+                        {historyTarget?.id === inv.id ? "Hide payments ▴" : "Payments ▾"}
                       </button>
                     )}
                     <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
                   </td>
                 </tr>
+                {historyTarget?.id === inv.id && (
+                  <tr>
+                    <td colSpan={8} className="bg-background/40 px-4 py-3">
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground">Payment history</div>
+                        {(inv.payments || [])
+                          .slice()
+                          .sort((a: any, b: any) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime())
+                          .map((p: any) => {
+                            const receipts = (p.emails || []).filter((e: any) => e.type === "RECEIPT");
+                            const status = sentReceiptIds.includes(p.id) || receipts.some((e: any) => e.status === "Sent")
+                              ? "Sent"
+                              : receipts.some((e: any) => e.status === "Failed")
+                                ? "Failed"
+                                : "Not sent";
+                            return (
+                              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2 text-sm">
+                                <div>
+                                  <div>${Number(p.amount).toFixed(2)} · {new Date(p.paidAt || p.createdAt).toLocaleDateString()}</div>
+                                  <div className="text-xs text-muted-foreground">{p.method || "Payment"}{p.reference ? ` · ${p.reference}` : ""}</div>
+                                  {p.notes && <div className="text-xs text-muted-foreground">{p.notes}</div>}
+                                  <div className="text-xs text-muted-foreground">Receipt: {status}</div>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setReceiptTarget({ invoice: inv, paymentId: p.id });
+                                    setReceiptTo(inv.customer?.email || "");
+                                    setReceiptError("");
+                                  }}
+                                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-accent hover:bg-white/5"
+                                >
+                                  Email receipt
+                                </button>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </td>
+                  </tr>
+                )}
               ))}
             </tbody>
           </table>
