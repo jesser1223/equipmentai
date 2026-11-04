@@ -31,7 +31,9 @@ export default function InvoicesPage() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailing, setEmailing] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<any>(null);
   const [receiptTarget, setReceiptTarget] = useState<{ invoice: any; paymentId: string } | null>(null);
+  const [sentReceiptIds, setSentReceiptIds] = useState<string[]>([]);
   const [receiptTo, setReceiptTo] = useState("");
   const [receipting, setReceipting] = useState(false);
   const [receiptError, setReceiptError] = useState("");
@@ -528,16 +530,8 @@ export default function InvoicesPage() {
                       <button onClick={() => { setPayTarget(inv); setPayAmount(""); }} className="text-xs text-accent">Record payment</button>
                     )}
                     {inv.payments?.length > 0 && (
-                      <button
-                        onClick={() => {
-                          const latest = [...inv.payments].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-                          setReceiptTarget({ invoice: inv, paymentId: latest.id });
-                          setReceiptTo(inv.customer?.email || "");
-                          setReceiptError("");
-                        }}
-                        className="text-xs text-muted-foreground"
-                      >
-                        Email receipt
+                      <button onClick={() => setHistoryTarget(inv)} className="text-xs text-muted-foreground">
+                        Payments
                       </button>
                     )}
                     <button onClick={() => setToDelete(inv)} className="text-muted-foreground hover:text-danger" aria-label={`Delete ${inv.number}`}><Trash2 className="h-4 w-4" /></button>
@@ -749,6 +743,45 @@ export default function InvoicesPage() {
           </div>
         </div>
       </Modal>
+      <Modal open={!!historyTarget} onClose={() => setHistoryTarget(null)} title={`Payments for ${historyTarget?.number || "invoice"}`}>
+        <div className="space-y-2">
+          {(historyTarget?.payments || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">No payments recorded.</p>
+          )}
+          {(historyTarget?.payments || [])
+            .slice()
+            .sort((a: any, b: any) => new Date(b.paidAt || b.createdAt).getTime() - new Date(a.paidAt || a.createdAt).getTime())
+            .map((p: any) => {
+              const receipts = (p.emails || []).filter((e: any) => e.type === "RECEIPT");
+              const status = sentReceiptIds.includes(p.id) || receipts.some((e: any) => e.status === "Sent")
+                ? "Sent"
+                : receipts.some((e: any) => e.status === "Failed")
+                  ? "Failed"
+                  : "Not sent";
+              return (
+                <div key={p.id} className="flex items-center justify-between gap-2 rounded border border-border px-3 py-2 text-sm">
+                  <div>
+                    <div>${Number(p.amount).toFixed(2)} · {new Date(p.paidAt || p.createdAt).toLocaleDateString()}</div>
+                    <div className="text-xs text-muted-foreground">{p.method || "Payment"}{p.reference ? ` · ${p.reference}` : ""}</div>
+                    {p.notes && <div className="text-xs text-muted-foreground">{p.notes}</div>}
+                    <div className="text-xs text-muted-foreground">Receipt: {status}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setReceiptTarget({ invoice: historyTarget, paymentId: p.id });
+                      setReceiptTo(historyTarget.customer?.email || "");
+                      setReceiptError("");
+                      setHistoryTarget(null);
+                    }}
+                    className="text-xs text-accent"
+                  >
+                    Email receipt
+                  </button>
+                </div>
+              );
+            })}
+        </div>
+      </Modal>
       <Modal open={!!receiptTarget} onClose={() => !receipting && setReceiptTarget(null)} title="Email receipt">
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">Payment recorded. Review the recipient before sending the receipt. Nothing is sent until you confirm.</p>
@@ -773,6 +806,7 @@ export default function InvoicesPage() {
                   setReceiptError(data.error || "Could not send receipt");
                   return;
                 }
+                setSentReceiptIds((ids) => ids.includes(receiptTarget.paymentId) ? ids : [...ids, receiptTarget.paymentId]);
                 setReceiptTarget(null);
                 setEmailSuccess(true);
                 setTimeout(() => setEmailSuccess(false), 3000);
