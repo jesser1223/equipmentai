@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Search, Trash2, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { EquipmentForm } from "@/components/equipment-form";
@@ -47,7 +47,9 @@ export default function EquipmentPage() {
   const [docCategory, setDocCategory] = useState("Other");
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docError, setDocError] = useState("");
+  const [docSuccess, setDocSuccess] = useState("");
   const [docBusy, setDocBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [toDelete, setToDelete] = useState<Equipment | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -98,9 +100,33 @@ export default function EquipmentPage() {
   const openDocs = async (eq: Equipment) => {
     setDocTarget(eq);
     setDocError("");
+    setDocSuccess("");
+    setDocFile(null);
     const res = await fetch(`/api/equipment/${eq.id}/documents`);
     const data = await res.json().catch(() => []);
     setDocs(Array.isArray(data) ? data : []);
+  };
+
+  const chooseFile = (file: File | null) => {
+    setDocError("");
+    setDocSuccess("");
+    if (!file) {
+      setDocFile(null);
+      return;
+    }
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      setDocFile(null);
+      setDocError("Only PDF files are accepted.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setDocFile(null);
+      setDocError("File must be 10 MB or smaller.");
+      return;
+    }
+    setDocFile(file);
+    setDocName(file.name.replace(/\.pdf$/i, ""));
   };
 
   const uploadDoc = async () => {
@@ -123,7 +149,9 @@ export default function EquipmentPage() {
     }
     setDocName("");
     setDocFile(null);
-    openDocs(docTarget);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    await openDocs(docTarget);
+    setDocSuccess("Document uploaded");
   };
 
   const removeDoc = async (docId: string) => {
@@ -288,17 +316,35 @@ export default function EquipmentPage() {
 
       <Modal open={!!docTarget} onClose={() => setDocTarget(null)} title={`Documents · ${docTarget?.name || ""}`}>
         <div className="space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-            <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
-              {["Insurance", "Pre-trip inspection", "Inspection report", "Maintenance record", "Ownership", "Safety certificate", "Operator manual", "Other"].map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <input type="file" accept="application/pdf" onChange={(e) => setDocFile(e.target.files?.[0] || null)} className="text-sm" />
-          {docError && <p className="text-sm text-red-400">{docError}</p>}
-          <button onClick={uploadDoc} disabled={docBusy} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
-            {docBusy ? "Uploading…" : "Upload PDF"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => chooseFile(e.target.files?.[0] || null)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="rounded-lg border border-accent/40 px-3 py-2 text-sm text-accent hover:bg-accent/10"
+          >
+            Upload Document
           </button>
+          {docFile && (
+            <div className="space-y-2 rounded border border-border p-3">
+              <div className="text-sm">{docFile.name}</div>
+              <div className="text-xs text-muted-foreground">{(docFile.size / 1024).toFixed(0)} KB · PDF</div>
+              <input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+              <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                {["Insurance", "Pre-trip inspection", "Inspection report", "Maintenance record", "Ownership", "Safety certificate", "Operator manual", "Other"].map((c) => <option key={c}>{c}</option>)}
+              </select>
+              <button onClick={uploadDoc} disabled={docBusy} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
+                {docBusy ? "Uploading…" : "Confirm upload"}
+              </button>
+            </div>
+          )}
+          {docError && <p className="text-sm text-red-400">{docError}</p>}
+          {docSuccess && <p className="text-sm text-emerald-400">{docSuccess}</p>}
           {docs.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents yet.</p>
           ) : (
