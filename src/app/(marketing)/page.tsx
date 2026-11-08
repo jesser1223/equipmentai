@@ -12,7 +12,7 @@ const areas = [
 function Preview({ title, lines }: { title: string; lines: string[] }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="mb-3 flex items-center justify-between text-xs text-white">
         <span>{title}</span>
         <span className="rounded bg-accent/15 px-2 py-0.5 text-accent">EquipmentAI</span>
       </div>
@@ -33,7 +33,7 @@ export default function HomePage() {
           <div>
             <p className="text-sm font-medium text-accent">EquipmentAI</p>
             <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">Run Your Equipment Business. All in One Place.</h1>
-            <p className="mt-4 text-lg text-muted-foreground">Manage equipment, schedule jobs, track maintenance, create quotes and send invoices — all from one simple platform built for equipment contractors.</p>
+            <p className="mt-4 text-lg text-white">Manage equipment, schedule jobs, track maintenance, create quotes and send invoices — all from one simple platform built for equipment contractors.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/signup" className="rounded-lg bg-accent px-5 py-3 text-sm font-medium text-accent-foreground hover:opacity-90">Start Your Free Trial</Link>
               <Link href="/features" className="rounded-lg border border-border px-5 py-3 text-sm hover:bg-white/5">Explore Features</Link>
@@ -50,7 +50,7 @@ export default function HomePage() {
             {areas.map(([title, text]) => (
               <div key={title} className="rounded-xl border border-border bg-card p-5">
                 <h3 className="font-medium">{title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+                <p className="mt-2 text-sm text-white">{text}</p>
               </div>
             ))}
           </div>
@@ -61,7 +61,7 @@ export default function HomePage() {
         <div className="grid items-center gap-6 md:grid-cols-2">
           <div>
             <h2 className="text-2xl font-semibold">Equipment management</h2>
-            <p className="mt-2 text-muted-foreground">Keep each machine’s rates, status, location, hour meter, and documents together.</p>
+            <p className="mt-2 text-white">Keep each machine’s rates, status, location, hour meter, and documents together.</p>
           </div>
           <Preview title="Equipment" lines={["Excavator · Available", "Rate $150/hr · $900/day", "Hour meter 4,280", "Insurance certificate"]} />
         </div>
@@ -69,13 +69,13 @@ export default function HomePage() {
           <Preview title="Schedule" lines={["Site prep · 8:00", "Excavator assigned", "Customer: North Lot", "Status: Scheduled"]} />
           <div>
             <h2 className="text-2xl font-semibold">Job scheduling</h2>
-            <p className="mt-2 text-muted-foreground">Schedule the work, assign the machine, and record actual hours when the job is done.</p>
+            <p className="mt-2 text-white">Schedule the work, assign the machine, and record actual hours when the job is done.</p>
           </div>
         </div>
         <div className="grid items-center gap-6 md:grid-cols-2">
           <div>
             <h2 className="text-2xl font-semibold">Invoicing</h2>
-            <p className="mt-2 text-muted-foreground">Turn completed work into an invoice draft, issue it, and record payments.</p>
+            <p className="mt-2 text-white">Turn completed work into an invoice draft, issue it, and record payments.</p>
           </div>
           <Preview title="Invoice" lines={["INV-1042 · Issued", "Equipment $900", "GST included", "Balance $945"]} />
         </div>
@@ -83,7 +83,7 @@ export default function HomePage() {
           <Preview title="Maintenance" lines={["Service due soon", "Last service 4,100 hrs", "Oil and filters", "Record saved"]} />
           <div>
             <h2 className="text-2xl font-semibold">Maintenance tracking</h2>
-            <p className="mt-2 text-muted-foreground">See what is due and keep a history of service on each machine.</p>
+            <p className="mt-2 text-white">See what is due and keep a history of service on each machine.</p>
           </div>
         </div>
       </section>
@@ -104,7 +104,7 @@ export default function HomePage() {
 
       <section className="mx-auto max-w-6xl px-4 py-14">
         <h2 className="text-2xl font-semibold">Why EquipmentAI</h2>
-        <ul className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+        <ul className="mt-4 grid gap-3 text-sm text-white sm:grid-cols-2">
           {["Less paperwork.", "Better organization.", "Easier job tracking.", "Improved equipment visibility.", "Simplified invoicing.", "Less time on administrative work."].map((item) => (
             <li key={item} className="rounded-lg border border-border bg-card px-4 py-3">{item}</li>
           ))}

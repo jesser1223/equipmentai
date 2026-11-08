@@ -14,12 +14,12 @@ export default function FeaturesPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14">
       <h1 className="text-4xl font-semibold">Features</h1>
-      <p className="mt-3 max-w-2xl text-muted-foreground">The tools already in EquipmentAI, written for the way equipment contractors work.</p>
+      <p className="mt-3 max-w-2xl text-white">The tools already in EquipmentAI, written for the way equipment contractors work.</p>
       <div className="mt-8 space-y-4">
         {features.map(([title, text]) => (
           <section key={title} className="rounded-2xl border border-border bg-card p-6">
             <h2 className="text-xl font-medium">{title}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+            <p className="mt-2 text-sm text-white">{text}</p>
           </section>
         ))}
       </div>
