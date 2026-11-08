@@ -6,11 +6,10 @@ const links = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-function Logo() {
+function Logo({ size = "h-10" }: { size?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-foreground">E</span>
-      EquipmentAI
+    <Link href="/" className="inline-flex items-center">
+      <img src="/equipmentai-logo.jpg" alt="EquipmentAI" className={`${size} w-auto rounded-full object-contain`} />
     </Link>
   );
 }
@@ -20,7 +19,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Logo />
+          <Logo size="h-12" />
           <nav className="hidden items-center gap-6 text-sm text-white md:flex">
             {links.map((l) => (
               <Link key={l.href} href={l.href} className="hover:text-foreground">{l.label}</Link>
