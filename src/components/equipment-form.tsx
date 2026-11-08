@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Attachment = {

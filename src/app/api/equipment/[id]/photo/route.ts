@@ -11,6 +11,8 @@ function imageType(bytes: Uint8Array) {
   return null;
 }
 
+const UTM = "utm_source=equipmentai&utm_medium=referral";
+
 function withUtm(url: string) {
   if (!url) return url;
   return url.includes("?") ? `${url}&${UTM}` : `${url}?${UTM}`;
