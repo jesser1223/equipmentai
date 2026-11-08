@@ -1,4 +1,5 @@
 import Link from "next/link";
+import logo from "./equipmentai-logo.jpg";
 
 const links = [
   { href: "/features", label: "Features" },
@@ -6,10 +7,16 @@ const links = [
   { href: "/pricing", label: "Pricing" },
 ];
 
-function Logo({ size = "h-10" }: { size?: string }) {
+function Logo({ size = "h-16 w-16" }: { size?: string }) {
   return (
-    <Link href="/" className="inline-flex items-center">
-      <img src="/equipmentai-logo.jpg" alt="EquipmentAI" className={`${size} w-auto rounded-full object-contain`} />
+    <Link href="/" className="inline-flex shrink-0 items-center" aria-label="EquipmentAI home">
+      <img
+        src={logo.src}
+        alt="EquipmentAI"
+        width={logo.width}
+        height={logo.height}
+        className={`${size} object-contain`}
+      />
     </Link>
   );
 }
