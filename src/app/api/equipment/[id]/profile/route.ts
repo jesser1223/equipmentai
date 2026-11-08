@@ -16,16 +16,19 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   });
   if (!equipment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const db = prisma as any;
   const [attachments, maintenanceRecords, documents, jobs] = await Promise.all([
     prisma.attachment.findMany({ where: { equipmentId: id, organizationId: orgId } }),
     prisma.maintenanceRecord.findMany({
       where: { equipmentId: id, organizationId: orgId },
       orderBy: { serviceDate: "desc" },
     }),
-    prisma.equipmentDocument.findMany({
-      where: { equipmentId: id, organizationId: orgId },
-      orderBy: { createdAt: "desc" },
-    }),
+    db.equipmentDocument
+      ? db.equipmentDocument.findMany({
+          where: { equipmentId: id, organizationId: orgId },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
     prisma.job.findMany({
       where: { equipmentId: id, organizationId: orgId },
       orderBy: { startDate: "desc" },
@@ -37,7 +40,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   ]);
 
   const seen = new Set<string>();
-  const invoicedRevenue = jobs.reduce((sum, job) => {
+  const invoicedRevenue = jobs.reduce((sum: number, job: any) => {
     const inv = job.invoice;
     if (!inv || inv.status === "Draft" || inv.status === "Void" || seen.has(inv.id)) return sum;
     seen.add(inv.id);
