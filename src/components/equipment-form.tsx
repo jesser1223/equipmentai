@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Attachment = {
   name: string;
@@ -54,16 +54,23 @@ const empty: EquipmentFormData = {
 
 export function EquipmentForm({
   initial,
+  equipmentId,
   onSave,
   onCancel,
 }: {
   initial?: Partial<EquipmentFormData>;
-  onSave: (data: EquipmentFormData) => Promise<void>;
+  equipmentId?: string;
+  onSave: (data: EquipmentFormData & { selectedPhotoId?: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [form, setForm] = useState<EquipmentFormData>({ ...empty, ...initial });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selected, setSelected] = useState<any>(null);
+  const [preview, setPreview] = useState(initial && (initial as any).photoUrl ? (initial as any).photoUrl : "");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const update = (k: keyof EquipmentFormData, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -76,7 +83,7 @@ export function EquipmentForm({
     }
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave({ ...form, selectedPhotoId: selected?.id });
     } catch (err: any) {
       setError(err.message || "Failed to save");
     } finally {
@@ -84,9 +91,80 @@ export function EquipmentForm({
     }
   };
 
+  const findPhotos = async () => {
+    if (!form.make.trim() || !form.model.trim()) {
+      setError("Enter the manufacturer and model before searching.");
+      return;
+    }
+    setSearching(true);
+    setError("");
+    const res = await fetch(`/api/equipment/photo-search?make=${encodeURIComponent(form.make)}&model=${encodeURIComponent(form.model)}`);
+    const data = await res.json().catch(() => ({}));
+    setSearching(false);
+    if (!res.ok) {
+      setError(data.error || "Photo search failed");
+      return;
+    }
+    setResults(data.results || []);
+  };
+
+  const removePhoto = async () => {
+    setSelected(null);
+    setPreview("");
+    if (equipmentId) await fetch(`/api/equipment/${equipmentId}/photo`, { method: "DELETE" });
+  };
+
+  const uploadOwn = async (file: File | null) => {
+    if (!file || !equipmentId) return;
+    const body = new FormData();
+    body.set("file", file);
+    const res = await fetch(`/api/equipment/${equipmentId}/photo`, { method: "PUT", body });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Upload failed");
+      return;
+    }
+    setPreview(`/api/equipment/${equipmentId}/photo?t=${Date.now()}`);
+    setSelected(null);
+  };
+
   return (
     <form onSubmit={submit} className="space-y-6">
       {error && <div className="rounded-lg bg-danger/15 px-3 py-2 text-sm text-danger">{error}</div>}
+      <section className="rounded-xl border border-border p-4">
+        <h3 className="text-sm font-medium">Equipment Photo</h3>
+        <div className="mt-3 flex flex-wrap items-start gap-4">
+          <div className="h-28 w-40 overflow-hidden rounded-lg border border-border bg-background">
+            {preview || selected ? (
+              <img src={selected?.previewUrl || preview} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No photo</div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={findPhotos} className="rounded-lg border border-border px-3 py-2 text-xs">{searching ? "Searching…" : "Find Photos"}</button>
+              <button type="button" onClick={() => fileRef.current?.click()} className="rounded-lg border border-border px-3 py-2 text-xs" disabled={!equipmentId}>Upload Photo</button>
+              <button type="button" onClick={removePhoto} className="rounded-lg border border-border px-3 py-2 text-xs">Remove Photo</button>
+            </div>
+            {!equipmentId && <p className="text-xs text-muted-foreground">Save the equipment first to upload your own photo.</p>}
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadOwn(e.target.files?.[0] || null)} />
+          </div>
+        </div>
+        {results.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {results.map((p) => (
+              <button type="button" key={p.id} onClick={() => setSelected(p)} className={`overflow-hidden rounded-lg border text-left ${selected?.id === p.id ? "border-accent" : "border-border"}`}>
+                <img src={p.previewUrl} alt="" className="h-24 w-full object-cover" />
+                <div className="px-2 py-1 text-[11px] text-muted-foreground">
+                  Photo by <a href={p.photographerUrl} target="_blank" className="underline">{p.photographer}</a> on Unsplash
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {selected && <p className="mt-2 text-xs text-muted-foreground">Selected. Save the equipment to keep this photo.</p>}
+      </section>
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Equipment Details</h3>

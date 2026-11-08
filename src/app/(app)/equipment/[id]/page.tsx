@@ -122,6 +122,23 @@ export default function EquipmentProfilePage() {
 
   return (
     <div className="space-y-6">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        {eq.photoSource === "upload" ? (
+          <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="h-64 w-full object-cover md:h-80" />
+        ) : eq.photoUrl ? (
+          <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer">
+            <img src={eq.photoUrl} alt={eq.name} className="h-64 w-full object-cover md:h-80" />
+          </a>
+        ) : (
+          <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">No equipment photo</div>
+        )}
+        {eq.photoSource === "unsplash" && eq.photoPhotographer && (
+          <p className="px-4 py-2 text-xs text-muted-foreground">
+            Photo by <a href={eq.photoPhotographerUrl} target="_blank" className="underline">{eq.photoPhotographer}</a> on <a href="https://unsplash.com/?utm_source=equipmentai&utm_medium=referral" target="_blank" className="underline">Unsplash</a>
+          </p>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link href="/equipment" className="text-sm text-accent">← Back to Equipment</Link>

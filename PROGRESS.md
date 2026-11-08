@@ -1,7 +1,8 @@
 ## Current Development Stage
-**Stage**: Equipment profile pages  
+**Stage**: Equipment photo search  
 **Date**: 2026-11-07  
-**Status**: /equipment/[id] profile added. Marketing site unchanged.
+**Status**: Unsplash search and equipment photo fields added.
 
-## Revenue
-Total invoiced revenue is the sum of invoice totals on this equipment's jobs, excluding Draft and Void. Each invoice is counted once.
+## Database
+Add nullable Equipment photo fields, then run:
+npx prisma db push

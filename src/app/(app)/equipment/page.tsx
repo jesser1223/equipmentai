@@ -91,6 +91,14 @@ export default function EquipmentPage() {
       const err = await res.json();
       throw new Error(err.error || "Save failed");
     }
+    const saved = await res.json();
+    if (data.selectedPhotoId && saved.id) {
+      await fetch(`/api/equipment/${saved.id}/photo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId: data.selectedPhotoId }),
+      });
+    }
     setModalOpen(false);
     setEditing(null);
     setToast(editing ? "Equipment updated" : "Equipment saved");
@@ -234,9 +242,16 @@ export default function EquipmentPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((eq) => (
-                <tr key={eq.id} className="hover:bg-white/5">
+                <tr
+                  key={eq.id}
+                  className="cursor-pointer hover:bg-white/5"
+                  onClick={() => { window.location.href = `/equipment/${eq.id}`; }}
+                >
                   <td className="px-4 py-3 font-medium">
-                    <Link href={`/equipment/${eq.id}`} className="hover:text-accent">{eq.name}</Link>
+                    <Link href={`/equipment/${eq.id}`} className="flex items-center gap-2 hover:text-accent">
+                      {eq.photoUrl ? <img src={eq.photoUrl} alt="" className="h-8 w-10 rounded object-cover" /> : null}
+                      {eq.name}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>
                   <td className="px-4 py-3">{eq.category}</td>
@@ -258,13 +273,14 @@ export default function EquipmentPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => openDocs(eq)}
+                        onClick={(e) => { e.stopPropagation(); openDocs(eq); }}
                         className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent hover:bg-accent/10"
                       >
                         Documents
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setEditing(eq);
                           setModalOpen(true);
                         }}
@@ -312,6 +328,7 @@ export default function EquipmentPage() {
               notes: a.notes || "",
             })),
           } : undefined}
+          equipmentId={editing?.id}
           onSave={handleSave}
           onCancel={() => { setModalOpen(false); setEditing(null); }}
         />
