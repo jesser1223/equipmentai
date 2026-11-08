@@ -127,10 +127,10 @@ export default function EquipmentProfilePage() {
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="relative h-72 bg-[#111827] md:h-96">
           {eq.photoSource === "upload" ? (
-            <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="h-full w-full object-cover" />
+            <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="absolute inset-0 h-full w-full object-cover object-center" />
           ) : eq.photoUrl ? (
-            <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer" className="block h-full">
-              <img src={eq.photoUrl} alt={eq.name} className="h-full w-full object-cover" />
+            <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer">
+              <img src={eq.photoUrl} alt={eq.name} className="absolute inset-0 h-full w-full object-cover object-center" />
             </a>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No equipment photo</div>
