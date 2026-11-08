@@ -55,7 +55,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <div className="border-t border-border px-4 py-4 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} EquipmentAI
+          © 2026 EquipmentAI
         </div>
       </footer>
     </div>
