@@ -19,7 +19,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Logo size="h-12" />
+          <Logo size="h-20 w-20" />
           <nav className="hidden items-center gap-6 text-sm text-white md:flex">
             {links.map((l) => (
               <Link key={l.href} href={l.href} className="hover:text-foreground">{l.label}</Link>
