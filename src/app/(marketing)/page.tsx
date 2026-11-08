@@ -1,5 +1,5 @@
 import Link from "next/link";
-import hero from "./hero-excavator.jpg";
+import hero from "./hero-equipment.jpg";
 
 const areas = [
   ["Equipment management", "Track machines, rates, status, and documents."],
@@ -41,16 +41,34 @@ export default function HomePage() {
               <Link href="/features" className="rounded-lg border border-border px-5 py-3 text-sm hover:bg-white/5">Explore Features</Link>
             </div>
           </div>
-          <div className="relative min-h-[380px] md:min-h-[480px]">
-            <div className="absolute -inset-6 rounded-full bg-accent/20 blur-3xl" />
+          <div className="relative min-h-[420px] overflow-hidden md:min-h-[480px]">
             <img
               src={hero.src}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover object-center brightness-125 contrast-110 [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
+              className="absolute inset-0 h-full w-full object-cover object-center"
             />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0b0f19] to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 z-10 md:left-6 md:right-auto md:w-80">
-              <Preview title="Dashboard" lines={["3 jobs scheduled today", "Excavator available · $150/hr", "Invoice INV-1042 outstanding", "1 service due soon"]} />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b0f19] via-[#0b0f19]/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-transparent to-[#0b0f19]/30" />
+            <div className="absolute inset-0 bg-black/25" />
+            <div className="absolute bottom-5 left-5 right-5 z-10 md:bottom-8 md:left-8 md:right-8">
+              <div className="rounded-2xl border border-white/10 bg-[#111827]/90 p-4 shadow-2xl backdrop-blur">
+                <div className="mb-3 flex items-center justify-between text-xs">
+                  <span className="font-medium">Fleet</span>
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-emerald-400">Available</span>
+                </div>
+                <div className="text-sm font-medium">Excavator · Unit 320</div>
+                <div className="mt-1 text-xs text-white/70">Earthworks · Hour meter 4,280</div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="text-white/60">Active job</div>
+                    <div className="mt-0.5">Site prep</div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="text-white/60">Service</div>
+                    <div className="mt-0.5 text-amber-300">Due soon</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
