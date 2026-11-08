@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Plus, Search, Trash2, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { EquipmentForm } from "@/components/equipment-form";

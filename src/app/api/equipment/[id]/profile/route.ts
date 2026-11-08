@@ -13,34 +13,44 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   const equipment = await prisma.equipment.findFirst({
     where: { id, organizationId: orgId },
-    include: {
-      attachments: true,
-      maintenanceRecords: { orderBy: { serviceDate: "desc" } },
-      documents: { orderBy: { createdAt: "desc" } },
-      jobs: {
-        orderBy: { startDate: "desc" },
-        include: {
-          customer: { select: { id: true, name: true } },
-          invoice: { select: { id: true, number: true, status: true, total: true } },
-        },
-      },
-    },
   });
   if (!equipment) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const billed = equipment.jobs
-    .map((job) => job.invoice)
-    .filter((inv): inv is NonNullable<typeof inv> => !!inv && inv.status !== "Draft" && inv.status !== "Void");
+  const [attachments, maintenanceRecords, documents, jobs] = await Promise.all([
+    prisma.attachment.findMany({ where: { equipmentId: id, organizationId: orgId } }),
+    prisma.maintenanceRecord.findMany({
+      where: { equipmentId: id, organizationId: orgId },
+      orderBy: { serviceDate: "desc" },
+    }),
+    prisma.equipmentDocument.findMany({
+      where: { equipmentId: id, organizationId: orgId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.job.findMany({
+      where: { equipmentId: id, organizationId: orgId },
+      orderBy: { startDate: "desc" },
+      include: {
+        customer: { select: { id: true, name: true } },
+        invoice: { select: { id: true, number: true, status: true, total: true } },
+      },
+    }),
+  ]);
+
   const seen = new Set<string>();
-  const invoicedRevenue = billed.reduce((sum, inv) => {
-    if (seen.has(inv.id)) return sum;
+  const invoicedRevenue = jobs.reduce((sum, job) => {
+    const inv = job.invoice;
+    if (!inv || inv.status === "Draft" || inv.status === "Void" || seen.has(inv.id)) return sum;
     seen.add(inv.id);
     return sum + Number(inv.total || 0);
   }, 0);
 
   return NextResponse.json({
     ...equipment,
-    jobCount: equipment.jobs.length,
+    attachments,
+    maintenanceRecords,
+    documents,
+    jobs,
+    jobCount: jobs.length,
     invoicedRevenue,
   });
 }
