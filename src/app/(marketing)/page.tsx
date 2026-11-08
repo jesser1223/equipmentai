@@ -1,4 +1,5 @@
 import Link from "next/link";
+import hero from "./hero-excavator.jpg";
 
 const areas = [
   ["Equipment management", "Track machines, rates, status, and documents."],
@@ -40,18 +41,16 @@ export default function HomePage() {
               <Link href="/features" className="rounded-lg border border-border px-5 py-3 text-sm hover:bg-white/5">Explore Features</Link>
             </div>
           </div>
-          <div className="relative min-h-[320px] md:min-h-[420px]">
-            <div className="absolute inset-0 rounded-[2rem] bg-accent/10 blur-3xl" />
+          <div className="relative min-h-[380px] md:min-h-[480px]">
+            <div className="absolute -inset-6 rounded-full bg-accent/20 blur-3xl" />
             <img
-              src="/hero-excavator.jpg"
-              alt="Excavator working at a construction site at night"
-              className="absolute inset-0 h-full w-full rounded-[2rem] object-cover opacity-80 [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_78%)]"
+              src={hero.src}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover object-center brightness-125 contrast-110 [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
             />
-            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[#0b0f19]/80" />
-            <div className="relative z-10 flex h-full items-end p-4 md:p-6">
-              <div className="w-full max-w-sm shadow-2xl shadow-black/40">
-                <Preview title="Dashboard" lines={["3 jobs scheduled today", "Excavator available · $150/hr", "Invoice INV-1042 outstanding", "1 service due soon"]} />
-              </div>
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0b0f19] to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4 z-10 md:left-6 md:right-auto md:w-80">
+              <Preview title="Dashboard" lines={["3 jobs scheduled today", "Excavator available · $150/hr", "Invoice INV-1042 outstanding", "1 service due soon"]} />
             </div>
           </div>
         </div>
