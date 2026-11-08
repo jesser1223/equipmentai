@@ -291,7 +291,8 @@ export default function EquipmentPage() {
                         <Pencil className="mr-1 inline h-3.5 w-3.5" /> Edit
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setDeleteError(null);
                           setToDelete(eq);
                         }}
