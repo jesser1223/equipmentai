@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type Attachment = {
   name: string;
@@ -70,6 +70,8 @@ export function EquipmentForm({
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<any>(null);
   const [preview, setPreview] = useState(initial && (initial as any).photoUrl ? (initial as any).photoUrl : "");
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const update = (k: keyof EquipmentFormData, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -109,9 +111,13 @@ export function EquipmentForm({
   };
 
   const removePhoto = async () => {
+    if (removing) return;
+    setRemoving(true);
     setSelected(null);
     setPreview("");
     if (equipmentId) await fetch(`/api/equipment/${equipmentId}/photo`, { method: "DELETE" });
+    setRemoving(false);
+    setConfirmRemove(false);
   };
 
   const uploadOwn = async (file: File | null) => {
@@ -145,7 +151,7 @@ export function EquipmentForm({
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={findPhotos} className="rounded-lg border border-border px-3 py-2 text-xs">{searching ? "Searching…" : "Find Photos"}</button>
               <button type="button" onClick={() => fileRef.current?.click()} className="rounded-lg border border-border px-3 py-2 text-xs" disabled={!equipmentId}>Upload Photo</button>
-              <button type="button" onClick={removePhoto} className="rounded-lg border border-border px-3 py-2 text-xs">Remove Photo</button>
+              <button type="button" onClick={() => setConfirmRemove(true)} className="rounded-lg border border-border px-3 py-2 text-xs">Remove Photo</button>
             </div>
             {!equipmentId && <p className="text-xs text-muted-foreground">Save the equipment first to upload your own photo.</p>}
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => uploadOwn(e.target.files?.[0] || null)} />
@@ -165,6 +171,15 @@ export function EquipmentForm({
         )}
         {selected && <p className="mt-2 text-xs text-muted-foreground">Selected. Save the equipment to keep this photo.</p>}
       </section>
+      <ConfirmDialog
+        open={confirmRemove}
+        onClose={() => { if (!removing) setConfirmRemove(false); }}
+        onConfirm={removePhoto}
+        title="Remove equipment photo?"
+        description="This removes the photo from this equipment. Unsplash photos are only unlinked. Uploaded photos are deleted from storage."
+        confirmLabel="Remove Photo"
+        loading={removing}
+      />
 
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Equipment Details</h3>

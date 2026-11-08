@@ -9,12 +9,24 @@ function withUtm(url: string) {
   return url.includes("?") ? `${url}&${UTM}` : `${url}?${UTM}`;
 }
 
+const hits = new Map<string, { count: number; reset: number }>();
+
 export async function GET(req: Request) {
   const session = await auth();
   const orgId = (session?.user as any)?.organizationId;
   const blocked = blockedOrganizationResponse(session);
   if (blocked) return blocked;
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const now = Date.now();
+  const bucket = hits.get(orgId);
+  if (!bucket || bucket.reset < now) {
+    hits.set(orgId, { count: 1, reset: now + 60 * 60 * 1000 });
+  } else if (bucket.count >= 30) {
+    return NextResponse.json({ error: "Photo search limit reached. Try again later." }, { status: 429 });
+  } else {
+    bucket.count += 1;
+  }
 
   const key = process.env.UNSPLASH_ACCESS_KEY;
   if (!key) return NextResponse.json({ error: "Image search is not configured." }, { status: 503 });

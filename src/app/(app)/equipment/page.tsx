@@ -19,6 +19,10 @@ type Equipment = {
   serviceStatus?: "Overdue" | "Due soon" | "Current" | "Not configured";
   hourMeter?: number | null;
   photoUrl?: string | null;
+  photoSource?: string | null;
+  photoPhotographer?: string | null;
+  photoPhotographerUrl?: string | null;
+  photoSourceUrl?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
@@ -250,8 +254,19 @@ export default function EquipmentPage() {
                 >
                   <td className="px-4 py-3 font-medium">
                     <Link href={`/equipment/${eq.id}`} className="flex items-center gap-2 hover:text-accent">
-                      {eq.photoUrl ? <img src={eq.photoUrl} alt="" className="h-8 w-10 rounded object-cover" /> : null}
-                      {eq.name}
+                      {eq.photoSource === "upload" ? (
+                        <img src={`/api/equipment/${eq.id}/photo`} alt="" className="h-8 w-10 rounded object-cover" />
+                      ) : eq.photoUrl ? (
+                        <img src={eq.photoUrl} alt="" className="h-8 w-10 rounded object-cover" />
+                      ) : null}
+                      <span>
+                        {eq.name}
+                        {eq.photoSource === "unsplash" && eq.photoPhotographer && (
+                          <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                            Photo by <a href={eq.photoPhotographerUrl || eq.photoSourceUrl || "#"} target="_blank" className="underline" onClick={(e) => e.stopPropagation()}>{eq.photoPhotographer}</a> on <a href="https://unsplash.com/?utm_source=equipmentai&utm_medium=referral" target="_blank" className="underline" onClick={(e) => e.stopPropagation()}>Unsplash</a>
+                          </span>
+                        )}
+                      </span>
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>

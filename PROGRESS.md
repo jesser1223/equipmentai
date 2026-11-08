@@ -1,8 +1,8 @@
 ## Current Development Stage
-**Stage**: Equipment photo search  
+**Stage**: Equipment photo fixes  
 **Date**: 2026-11-07  
-**Status**: Unsplash search and equipment photo fields added.
+**Status**: Attribution, upload display, confirmation, file signatures, and search limits added.
 
-## Database
-Add nullable Equipment photo fields, then run:
-npx prisma db push
+## Still required
+- Create private Supabase bucket equipment-photos if uploads are used.
+- Run npx prisma db push if photo fields are not in the database yet.
