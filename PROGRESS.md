@@ -1,7 +1,7 @@
 ## Current Development Stage
-**Stage**: Public marketing site  
+**Stage**: Equipment profile pages  
 **Date**: 2026-11-07  
-**Status**: Public pages at /, /features, /how-it-works, /pricing. Dashboard moved to /dashboard.
+**Status**: /equipment/[id] profile added. Marketing site unchanged.
 
-## Pricing verified
-$149 CAD per company per month. 14-day free trial. No card required to start.
+## Revenue
+Total invoiced revenue is the sum of invoice totals on this equipment's jobs, excluding Draft and Void. Each invoice is counted once.

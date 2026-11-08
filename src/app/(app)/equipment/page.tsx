@@ -234,7 +234,9 @@ export default function EquipmentPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((eq) => (
                 <tr key={eq.id} className="hover:bg-white/5">
-                  <td className="px-4 py-3 font-medium">{eq.name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link href={`/equipment/${eq.id}`} className="hover:text-accent">{eq.name}</Link>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{eq.unitNumber}</td>
                   <td className="px-4 py-3">{eq.category}</td>
                   <td className="px-4 py-3">
