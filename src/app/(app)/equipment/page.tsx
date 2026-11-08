@@ -18,6 +18,7 @@ type Equipment = {
   dailyRate: number;
   serviceStatus?: "Overdue" | "Due soon" | "Current" | "Not configured";
   hourMeter?: number | null;
+  photoUrl?: string | null;
 };
 
 const statusStyles: Record<string, string> = {
