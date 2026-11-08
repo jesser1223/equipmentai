@@ -125,12 +125,12 @@ export default function EquipmentProfilePage() {
       <Link href="/equipment" className="text-sm text-accent">← Back to Equipment</Link>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="relative h-72 bg-[#111827] md:h-96">
+        <div className="relative aspect-[16/9] bg-[#111827]">
           {eq.photoSource === "upload" ? (
-            <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="absolute inset-0 h-full w-full object-cover object-center" />
+            <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="absolute inset-0 h-full w-full object-contain" />
           ) : eq.photoUrl ? (
             <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer">
-              <img src={eq.photoUrl} alt={eq.name} className="absolute inset-0 h-full w-full object-cover object-center" />
+              <img src={eq.photoUrl} alt={eq.name} className="absolute inset-0 h-full w-full object-contain" />
             </a>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No equipment photo</div>
