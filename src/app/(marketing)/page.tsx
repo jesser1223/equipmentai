@@ -28,9 +28,10 @@ function Preview({ title, lines }: { title: string; lines: string[] }) {
 export default function HomePage() {
   return (
     <div>
-      <section className="mx-auto max-w-6xl px-4 py-16 md:py-24">
-        <div className="grid items-center gap-10 md:grid-cols-2">
-          <div>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_40%,rgba(34,211,238,0.18),transparent_42%)]" />
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
+          <div className="relative z-10">
             <p className="text-sm font-medium text-accent">EquipmentAI</p>
             <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">Run Your Equipment Business. All in One Place.</h1>
             <p className="mt-4 text-lg text-white">Manage equipment, schedule jobs, track maintenance, create quotes and send invoices — all from one simple platform built for equipment contractors.</p>
@@ -39,7 +40,20 @@ export default function HomePage() {
               <Link href="/features" className="rounded-lg border border-border px-5 py-3 text-sm hover:bg-white/5">Explore Features</Link>
             </div>
           </div>
-          <Preview title="Dashboard" lines={["3 jobs scheduled today", "Excavator available · $150/hr", "Invoice INV-1042 outstanding", "1 service due soon"]} />
+          <div className="relative min-h-[320px] md:min-h-[420px]">
+            <div className="absolute inset-0 rounded-[2rem] bg-accent/10 blur-3xl" />
+            <img
+              src="/hero-excavator.jpg"
+              alt="Excavator working at a construction site at night"
+              className="absolute inset-0 h-full w-full rounded-[2rem] object-cover opacity-80 [mask-image:radial-gradient(ellipse_at_center,black_45%,transparent_78%)]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-[#0b0f19]/80" />
+            <div className="relative z-10 flex h-full items-end p-4 md:p-6">
+              <div className="w-full max-w-sm shadow-2xl shadow-black/40">
+                <Preview title="Dashboard" lines={["3 jobs scheduled today", "Excavator available · $150/hr", "Invoice INV-1042 outstanding", "1 service due soon"]} />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
