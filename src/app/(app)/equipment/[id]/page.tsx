@@ -122,34 +122,38 @@ export default function EquipmentProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        {eq.photoSource === "upload" ? (
-          <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="h-64 w-full object-cover md:h-80" />
-        ) : eq.photoUrl ? (
-          <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer">
-            <img src={eq.photoUrl} alt={eq.name} className="h-64 w-full object-cover md:h-80" />
-          </a>
-        ) : (
-          <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">No equipment photo</div>
-        )}
-        {eq.photoSource === "unsplash" && eq.photoPhotographer && (
-          <p className="px-4 py-2 text-xs text-muted-foreground">
-            Photo by <a href={eq.photoPhotographerUrl} target="_blank" className="underline">{eq.photoPhotographer}</a> on <a href="https://unsplash.com/?utm_source=equipmentai&utm_medium=referral" target="_blank" className="underline">Unsplash</a>
-          </p>
-        )}
-      </div>
+      <Link href="/equipment" className="text-sm text-accent">← Back to Equipment</Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link href="/equipment" className="text-sm text-accent">← Back to Equipment</Link>
-          <h1 className="mt-2 text-2xl font-semibold">{eq.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {[eq.make, eq.model].filter(Boolean).join(" ")}
-            {eq.year ? ` · ${eq.year}` : ""}
-            {eq.unitNumber ? ` · Unit ${eq.unitNumber}` : ""}
-          </p>
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="relative h-72 bg-[#111827] md:h-96">
+          {eq.photoSource === "upload" ? (
+            <img src={`/api/equipment/${eq.id}/photo`} alt={eq.name} className="h-full w-full object-cover" />
+          ) : eq.photoUrl ? (
+            <a href={eq.photoSourceUrl || eq.photoUrl} target="_blank" rel="noreferrer" className="block h-full">
+              <img src={eq.photoUrl} alt={eq.name} className="h-full w-full object-cover" />
+            </a>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No equipment photo</div>
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/20 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-end justify-between gap-3 p-5">
+            <div>
+              <div className="mb-2 inline-flex rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-xs">{eq.status}</div>
+              <h1 className="text-3xl font-semibold text-white">{eq.name}</h1>
+              <p className="mt-1 text-sm text-white/80">
+                {[eq.make, eq.model].filter(Boolean).join(" ")}
+                {eq.year ? ` · ${eq.year}` : ""}
+                {eq.unitNumber ? ` · Unit ${eq.unitNumber}` : ""}
+              </p>
+            </div>
+            {eq.photoSource === "unsplash" && eq.photoPhotographer && (
+              <p className="text-[11px] text-white/70">
+                Photo by <a href={eq.photoPhotographerUrl} target="_blank" className="underline">{eq.photoPhotographer}</a> on <a href="https://unsplash.com/?utm_source=equipmentai&utm_medium=referral" target="_blank" className="underline">Unsplash</a>
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-border px-5 py-3">
           <button onClick={() => setEditing(true)} className="rounded-lg border border-border px-3 py-2 text-sm">Edit Equipment</button>
           <button onClick={() => setMaintOpen(true)} className="rounded-lg border border-border px-3 py-2 text-sm">Record Maintenance</button>
           <button onClick={() => setDocOpen(true)} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">Upload Document</button>
