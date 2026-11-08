@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 const baseNav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/equipment", label: "Equipment", icon: Truck },
   { href: "/maintenance", label: "Maintenance", icon: ClipboardList },

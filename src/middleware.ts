@@ -3,11 +3,13 @@ import { NextResponse } from "next/server";
 import { accessMessage, canAccessApp } from "@/lib/access";
 
 const PUBLIC = ["/login", "/signup", "/forgot-password", "/reset-password", "/pending", "/denied"];
+const MARKETING = ["/features", "/how-it-works", "/pricing"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const path = req.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path.startsWith(p)) || path.startsWith("/api/auth") || path.startsWith("/api/signup");
+  const isMarketing = path === "/" || MARKETING.some((p) => path === p || path.startsWith(p + "/"));
+  const isPublic = isMarketing || PUBLIC.some((p) => path.startsWith(p)) || path.startsWith("/api/auth") || path.startsWith("/api/signup");
   const isOwner = !!(req.auth?.user as any)?.isOwner;
 
   if (!isLoggedIn && !isPublic) {
@@ -15,13 +17,13 @@ export default auth((req) => {
   }
 
   if (isLoggedIn && (path.startsWith("/login") || path.startsWith("/signup"))) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
+    return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
   }
 
   // Super-admin gate for /admin pages. Admin APIs enforce this again on the server.
   if (path.startsWith("/admin")) {
     if (!isOwner) {
-      return NextResponse.redirect(new URL("/", req.nextUrl));
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
     }
   }
 

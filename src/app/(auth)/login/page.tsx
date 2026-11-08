@@ -21,13 +21,13 @@ export default function LoginPage() {
         email: email.trim().toLowerCase(),
         password,
         redirect: false,
-        callbackUrl: "/",
+        callbackUrl: "/dashboard",
       });
       if (!res || res.error || res.ok === false) {
         setError("Incorrect email or password.");
         return;
       }
-      window.location.href = res.url || "/";
+      window.location.href = "/dashboard";
     } catch {
       setError("Incorrect email or password.");
     } finally {

@@ -1,12 +1,7 @@
 ## Current Development Stage
-**Stage**: Batch 6 payment receipts  
-**Date**: 2026-11-03  
-**Status**: Optional receipt email after a payment is recorded. Does not send automatically. Does not change payment math.
+**Stage**: Public marketing site  
+**Date**: 2026-11-07  
+**Status**: Public pages at /, /features, /how-it-works, /pricing. Dashboard moved to /dashboard.
 
-## Schema
-InvoiceEmail.paymentId optional. Type RECEIPT.
-
-Run: npx prisma db push
-
-## Balance
-Remaining balance is invoice total minus payments recorded through the selected payment.
+## Pricing verified
+$149 CAD per company per month. 14-day free trial. No card required to start.
