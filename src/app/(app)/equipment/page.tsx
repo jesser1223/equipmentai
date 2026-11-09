@@ -155,10 +155,12 @@ export default function EquipmentPage() {
     body.set("category", docCategory);
     body.set("file", docFile);
     const res = await fetch(`/api/equipment/${docTarget.id}/documents`, { method: "POST", body });
-    const data = await res.json().catch(() => ({}));
+    const text = await res.text();
+    let data: any = {};
+    try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
     setDocBusy(false);
     if (!res.ok) {
-      setDocError(data.error || "Upload failed");
+      setDocError(data.error || `Upload failed (${res.status})`);
       return;
     }
     setDocName("");
