@@ -47,7 +47,8 @@ export default function EquipmentPage() {
   const [editing, setEditing] = useState<any>(null);
   const [toast, setToast] = useState("");
 
-  const [docTarget, setDocTarget] = useState<Equipment | null>(null);
+  const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [deletingDoc, setDeletingDoc] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [docName, setDocName] = useState("");
   const [docCategory, setDocCategory] = useState("Other");
@@ -174,10 +175,18 @@ export default function EquipmentPage() {
     setDocSuccess("Document uploaded");
   };
 
-  const removeDoc = async (docId: string) => {
-    if (!docTarget) return;
-    const res = await fetch(`/api/equipment/${docTarget.id}/documents/${docId}`, { method: "DELETE" });
-    if (res.ok) openDocs(docTarget);
+  const removeDoc = async () => {
+    if (!docTarget || !docToDelete) return;
+    setDeletingDoc(true);
+    const res = await fetch(`/api/equipment/${docTarget.id}/documents/${docToDelete.id}`, { method: "DELETE" });
+    setDeletingDoc(false);
+    if (res.ok) {
+      setDocToDelete(null);
+      openDocs(docTarget);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setDocError(data.error || "Could not delete document.");
+    }
   };
 
   const confirmDelete = async () => {
@@ -371,7 +380,7 @@ export default function EquipmentPage() {
                                 </div>
                                 <div className="flex gap-2">
                                   <a href={`/api/equipment/${eq.id}/documents/${doc.id}`} target="_blank" className="text-xs text-accent">View</a>
-                                  <button onClick={() => removeDoc(doc.id)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
+                                  <button onClick={() => setDocToDelete(doc)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
                                 </div>
                               </div>
                             ))}
@@ -414,6 +423,15 @@ export default function EquipmentPage() {
         />
       </Modal>
 
+      <ConfirmDialog
+        open={!!docToDelete}
+        onClose={() => { if (!deletingDoc) setDocToDelete(null); }}
+        onConfirm={removeDoc}
+        title="Delete document?"
+        description={docToDelete ? `Delete “${docToDelete.name}”? This cannot be undone.` : ""}
+        confirmLabel="Delete Document"
+        loading={deletingDoc}
+      />
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => {
