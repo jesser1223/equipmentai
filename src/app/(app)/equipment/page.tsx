@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Trash2, Pencil } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -112,6 +112,10 @@ export default function EquipmentPage() {
   };
 
   const openDocs = async (eq: Equipment) => {
+    if (docTarget?.id === eq.id) {
+      setDocTarget(null);
+      return;
+    }
     setDocTarget(eq);
     setDocError("");
     setDocSuccess("");
@@ -249,8 +253,8 @@ export default function EquipmentPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((eq) => (
+                <Fragment key={eq.id}>
                 <tr
-                  key={eq.id}
                   className="cursor-pointer hover:bg-white/5"
                   onClick={() => { window.location.href = `/equipment/${eq.id}`; }}
                 >
@@ -292,9 +296,9 @@ export default function EquipmentPage() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); openDocs(eq); }}
-                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent hover:bg-accent/10"
+                        className={`rounded-lg border px-3 py-1.5 text-xs ${docTarget?.id === eq.id ? "border-accent bg-accent/10 text-accent" : "border-accent/40 text-accent hover:bg-accent/10"}`}
                       >
-                        Documents
+                        {docTarget?.id === eq.id ? "Hide documents" : "Documents"}
                       </button>
                       <button
                         onClick={(e) => {
@@ -321,6 +325,63 @@ export default function EquipmentPage() {
                     </div>
                   </td>
                 </tr>
+                {docTarget?.id === eq.id && (
+                  <tr>
+                    <td colSpan={9} className="bg-background/40 px-4 py-3">
+                      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-sm font-medium">Documents · {eq.name}</div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          className="hidden"
+                          onChange={(e) => chooseFile(e.target.files?.[0] || null)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="rounded-lg border border-accent/40 px-3 py-2 text-sm text-accent hover:bg-accent/10"
+                        >
+                          Upload Document
+                        </button>
+                        {docFile && (
+                          <div className="space-y-2 rounded border border-border p-3">
+                            <div className="text-sm">{docFile.name}</div>
+                            <div className="text-xs text-muted-foreground">{(docFile.size / 1024).toFixed(0)} KB · PDF</div>
+                            <input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                            <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                              {["Insurance", "Pre-trip inspection", "Inspection report", "Maintenance record", "Ownership", "Safety certificate", "Operator manual", "Other"].map((c) => <option key={c}>{c}</option>)}
+                            </select>
+                            <button onClick={uploadDoc} disabled={docBusy} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
+                              {docBusy ? "Uploading…" : "Confirm upload"}
+                            </button>
+                          </div>
+                        )}
+                        {docError && <p className="text-sm text-red-400">{docError}</p>}
+                        {docSuccess && <p className="text-sm text-emerald-400">{docSuccess}</p>}
+                        {docs.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No documents yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {docs.map((doc) => (
+                              <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2 text-sm">
+                                <div>
+                                  <div>{doc.name} · PDF</div>
+                                  <div className="text-xs text-muted-foreground">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()} · {(doc.size / 1024).toFixed(0)} KB</div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <a href={`/api/equipment/${eq.id}/documents/${doc.id}`} target="_blank" className="text-xs text-accent">View</a>
+                                  <button onClick={() => removeDoc(doc.id)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
               ))}
             </tbody>
           </table>
@@ -353,57 +414,6 @@ export default function EquipmentPage() {
         />
       </Modal>
 
-      <Modal open={!!docTarget} onClose={() => setDocTarget(null)} title={`Documents · ${docTarget?.name || ""}`}>
-        <div className="space-y-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/pdf,.pdf"
-            className="hidden"
-            onChange={(e) => chooseFile(e.target.files?.[0] || null)}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg border border-accent/40 px-3 py-2 text-sm text-accent hover:bg-accent/10"
-          >
-            Upload Document
-          </button>
-          {docFile && (
-            <div className="space-y-2 rounded border border-border p-3">
-              <div className="text-sm">{docFile.name}</div>
-              <div className="text-xs text-muted-foreground">{(docFile.size / 1024).toFixed(0)} KB · PDF</div>
-              <input value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-              <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm">
-                {["Insurance", "Pre-trip inspection", "Inspection report", "Maintenance record", "Ownership", "Safety certificate", "Operator manual", "Other"].map((c) => <option key={c}>{c}</option>)}
-              </select>
-              <button onClick={uploadDoc} disabled={docBusy} className="rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground disabled:opacity-50">
-                {docBusy ? "Uploading…" : "Confirm upload"}
-              </button>
-            </div>
-          )}
-          {docError && <p className="text-sm text-red-400">{docError}</p>}
-          {docSuccess && <p className="text-sm text-emerald-400">{docSuccess}</p>}
-          {docs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {docs.map((doc) => (
-                <div key={doc.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border px-3 py-2 text-sm">
-                  <div>
-                    <div>{doc.name} · PDF</div>
-                    <div className="text-xs text-muted-foreground">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()} · {(doc.size / 1024).toFixed(0)} KB</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <a href={`/api/equipment/${docTarget?.id}/documents/${doc.id}`} target="_blank" className="text-xs text-accent">View</a>
-                    <button onClick={() => removeDoc(doc.id)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </Modal>
       <ConfirmDialog
         open={!!toDelete}
         onClose={() => {
