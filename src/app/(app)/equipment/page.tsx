@@ -47,6 +47,7 @@ export default function EquipmentPage() {
   const [editing, setEditing] = useState<any>(null);
   const [toast, setToast] = useState("");
 
+  const [docTarget, setDocTarget] = useState<Equipment | null>(null);
   const [docToDelete, setDocToDelete] = useState<any>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
