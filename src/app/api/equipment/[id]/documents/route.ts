@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
-import { storageConfigured, uploadPdf } from "@/lib/document-storage";
+import { storageConfigured, createSignedUpload } from "@/lib/document-storage";
 
 const CATEGORIES = [
   "Insurance",
@@ -50,28 +50,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Document storage is not configured. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY." }, { status: 500 });
     }
 
-    const form = await req.formData();
-    const file = form.get("file");
-    const name = String(form.get("name") || "").trim();
-    const category = String(form.get("category") || "Other");
+    const body = await req.json();
+    const name = String(body.name || "").trim();
+    const category = String(body.category || "Other");
+    const fileName = String(body.fileName || `${name}.pdf`);
+    const size = Number(body.size || 0);
     if (!name) return NextResponse.json({ error: "Document name is required." }, { status: 400 });
     if (!CATEGORIES.includes(category)) return NextResponse.json({ error: "Invalid category." }, { status: 400 });
-    if (!(file instanceof File)) return NextResponse.json({ error: "PDF file is required." }, { status: 400 });
-    if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "File must be 10 MB or smaller." }, { status: 400 });
-
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const header = new TextDecoder().decode(bytes.slice(0, 5));
-    if (header !== "%PDF-" || (file.type && file.type !== "application/pdf")) {
-      return NextResponse.json({ error: "Only PDF files are accepted." }, { status: 400 });
-    }
+    if (!size || size > 10 * 1024 * 1024) return NextResponse.json({ error: "File must be 10 MB or smaller." }, { status: 400 });
 
     const doc = await prisma.equipmentDocument.create({
       data: {
         name,
         category,
-        fileName: file.name || `${name}.pdf`,
+        fileName,
         mimeType: "application/pdf",
-        size: file.size,
+        size,
         storagePath: "pending",
         equipmentId: id,
         organizationId: result.orgId!,
@@ -81,17 +75,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const path = `${result.orgId}/${id}/${doc.id}.pdf`;
     try {
-      await uploadPdf(path, bytes);
+      const signed = await createSignedUpload(path);
+      const saved = await prisma.equipmentDocument.update({
+        where: { id: doc.id },
+        data: { storagePath: path },
+      });
+      return NextResponse.json({ ...saved, uploadUrl: signed.uploadUrl, token: signed.token }, { status: 201 });
     } catch (err: any) {
       await prisma.equipmentDocument.delete({ where: { id: doc.id } }).catch(() => null);
       return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
     }
-
-    const saved = await prisma.equipmentDocument.update({
-      where: { id: doc.id },
-      data: { storagePath: path },
-    });
-    return NextResponse.json(saved, { status: 201 });
   } catch (err: any) {
     const message = String(err?.message || "");
     if (/equipmentDocument|does not exist|P2021/i.test(message)) {

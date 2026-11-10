@@ -95,17 +95,44 @@ export default function EquipmentProfilePage() {
   const uploadDoc = async () => {
     if (!docFile || !docName.trim()) return;
     setBusy(true);
-    const body = new FormData();
-    body.set("name", docName.trim());
-    body.set("category", docCategory);
-    body.set("file", docFile);
-    const res = await fetch(`/api/equipment/${params.id}/documents`, { method: "POST", body });
-    setBusy(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
+    const header = new TextDecoder().decode(new Uint8Array(await docFile.slice(0, 5).arrayBuffer()));
+    if (header !== "%PDF-") {
+      setBusy(false);
+      setMessage("Only PDF files are accepted.");
+      return;
+    }
+    const res = await fetch(`/api/equipment/${params.id}/documents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: docName.trim(),
+        category: docCategory,
+        fileName: docFile.name,
+        size: docFile.size,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.uploadUrl) {
+      setBusy(false);
       setMessage(data.error || "Upload failed");
       return;
     }
+    const put = await fetch(data.uploadUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+        "Content-Type": "application/pdf",
+        "x-upsert": "true",
+      },
+      body: docFile,
+    });
+    if (!put.ok) {
+      await fetch(`/api/equipment/${params.id}/documents/${data.id}`, { method: "DELETE" }).catch(() => null);
+      setBusy(false);
+      setMessage("Could not store the PDF.");
+      return;
+    }
+    setBusy(false);
     setDocOpen(false);
     setDocFile(null);
     setDocName("");

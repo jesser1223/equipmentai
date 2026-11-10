@@ -11,7 +11,30 @@ export function storageConfigured() {
   return !!config();
 }
 
-export async function uploadPdf(path: string, bytes: Uint8Array) {
+export async function createSignedUpload(path: string) {
+  const cfg = config();
+  if (!cfg) throw new Error("Document storage is not configured.");
+  const res = await fetch(`${cfg.url}/storage/v1/object/upload/sign/${BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${cfg.key}`,
+      apikey: cfg.key,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+  const detail = await res.text();
+  if (!res.ok) {
+    if (res.status === 404 || /bucket/i.test(detail)) {
+      throw new Error("Document storage bucket is missing. Create a private Supabase bucket named equipment-documents.");
+    }
+    throw new Error(`Could not start upload (${res.status})${detail ? `: ${detail.slice(0, 180)}` : ""}`);
+  }
+  const data = JSON.parse(detail);
+  const raw = String(data.url || "");
+  const uploadUrl = raw.startsWith("http") ? raw : `${cfg.url}/storage/v1/${raw.replace(/^\//, "")}`;
+  return { uploadUrl, token: String(data.token || "") };
+}
   const cfg = config();
   if (!cfg) throw new Error("Document storage is not configured.");
   const res = await fetch(`${cfg.url}/storage/v1/object/${BUCKET}/${path}`, {

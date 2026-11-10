@@ -156,14 +156,46 @@ export default function EquipmentPage() {
     }
     setDocBusy(true);
     setDocError("");
-    const body = new FormData();
-    body.set("name", docName.trim());
-    body.set("category", docCategory);
-    body.set("file", docFile);
-    const res = await fetch(`/api/equipment/${docTarget.id}/documents`, { method: "POST", body });
+    const header = new TextDecoder().decode(new Uint8Array(await docFile.slice(0, 5).arrayBuffer()));
+    if (header !== "%PDF-") {
+      setDocBusy(false);
+      setDocError("Only PDF files are accepted.");
+      return;
+    }
+    const res = await fetch(`/api/equipment/${docTarget.id}/documents`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: docName.trim(),
+        category: docCategory,
+        fileName: docFile.name,
+        size: docFile.size,
+      }),
+    });
     const text = await res.text();
     let data: any = {};
     try { data = JSON.parse(text); } catch { data = { error: text.slice(0, 200) }; }
+    if (!res.ok || !data.uploadUrl) {
+      setDocBusy(false);
+      setDocError(data.error || `Upload failed (${res.status})`);
+      return;
+    }
+    const put = await fetch(data.uploadUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${data.token}`,
+        "Content-Type": "application/pdf",
+        "x-upsert": "true",
+      },
+      body: docFile,
+    });
+    if (!put.ok) {
+      await fetch(`/api/equipment/${docTarget.id}/documents/${data.id}`, { method: "DELETE" }).catch(() => null);
+      const detail = await put.text().catch(() => "");
+      setDocBusy(false);
+      setDocError(detail.slice(0, 180) || "Could not store the PDF.");
+      return;
+    }
     setDocBusy(false);
     if (!res.ok) {
       setDocError(data.error || `Upload failed (${res.status})`);
