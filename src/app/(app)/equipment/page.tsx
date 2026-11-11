@@ -51,7 +51,6 @@ export default function EquipmentPage() {
   const [docToDelete, setDocToDelete] = useState<any>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string; equipmentId: string } | null>(null);
-  const [deletingDoc, setDeletingDoc] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [docName, setDocName] = useState("");
   const [docCategory, setDocCategory] = useState("Other");
