@@ -26,6 +26,7 @@ export default function EquipmentProfilePage() {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [maintOpen, setMaintOpen] = useState(false);
+  const [docOpen, setDocOpen] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string } | null>(null);
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docName, setDocName] = useState("");
