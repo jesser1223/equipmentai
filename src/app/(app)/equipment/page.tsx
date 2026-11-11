@@ -48,7 +48,7 @@ export default function EquipmentPage() {
   const [toast, setToast] = useState("");
 
   const [docTarget, setDocTarget] = useState<Equipment | null>(null);
-  const [docToDelete, setDocToDelete] = useState<any>(null);
+  const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string; equipmentId: string } | null>(null);
   const [deletingDoc, setDeletingDoc] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [docName, setDocName] = useState("");
@@ -412,7 +412,7 @@ export default function EquipmentPage() {
                                   <div className="text-xs text-muted-foreground">{doc.category} · {new Date(doc.createdAt).toLocaleDateString()} · {(doc.size / 1024).toFixed(0)} KB</div>
                                 </div>
                                 <div className="flex gap-2">
-                                  <a href={`/api/equipment/${eq.id}/documents/${doc.id}`} target="_blank" className="text-xs text-accent">View</a>
+                                  <button onClick={() => setViewingDoc({ id: doc.id, name: doc.name, equipmentId: eq.id })} className="text-xs text-accent">View</button>
                                   <button onClick={() => setDocToDelete(doc)} className="text-xs text-muted-foreground hover:text-danger">Delete</button>
                                 </div>
                               </div>
@@ -429,6 +429,17 @@ export default function EquipmentPage() {
           </table>
         )}
       </div>
+
+      {viewingDoc && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0b0f19]">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <button onClick={() => setViewingDoc(null)} className="rounded-lg border border-border px-3 py-2 text-sm">← Back to Equipment</button>
+            <div className="truncate text-sm font-medium">{viewingDoc.name}</div>
+            <a href={`/api/equipment/${viewingDoc.equipmentId}/documents/${viewingDoc.id}`} target="_blank" className="rounded-lg border border-border px-3 py-2 text-sm">Open in new tab</a>
+          </div>
+          <iframe src={`/api/equipment/${viewingDoc.equipmentId}/documents/${viewingDoc.id}`} title={viewingDoc.name} className="h-full w-full flex-1 bg-white" />
+        </div>
+      )}
 
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? "Edit Equipment" : "Add Equipment"}>
         <EquipmentForm
