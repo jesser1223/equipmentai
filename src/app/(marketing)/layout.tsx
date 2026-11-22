@@ -54,6 +54,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             {links.map((l) => <Link key={l.href} href={l.href} className="hover:text-foreground">{l.label}</Link>)}
             <Link href="/login" className="hover:text-foreground">Sign In</Link>
             <Link href="/signup" className="hover:text-foreground">Get Started</Link>
+            <Link href="/terms" className="hover:text-foreground">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-foreground">Privacy Policy</Link>
           </div>
           <div className="text-sm text-white">
             <div className="font-medium text-foreground">Contact</div>

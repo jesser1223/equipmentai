@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { PRIVACY_VERSION, TERMS_VERSION, agreementDecision } from "@/lib/legal";
 
 export async function POST(req: Request) {
   try {
@@ -9,7 +10,12 @@ export async function POST(req: Request) {
     const companyName = (body.companyName as string)?.trim();
     const email = (body.email as string)?.trim().toLowerCase();
     const password = body.password as string;
+    const decision = agreementDecision(body.agreed);
+    const marketingConsent = body.marketingConsent === true;
 
+    if (!decision.ok) {
+      return NextResponse.json({ error: decision.error }, { status: 400 });
+    }
     if (!name || !email || !password || !companyName) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
@@ -23,18 +29,38 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+    const userAgent = req.headers.get("user-agent") || null;
+    const acceptedAt = new Date();
 
-    const org = await prisma.organization.create({
-      data: { name: companyName },
-    });
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        organizationId: org.id,
-      },
+    const user = await prisma.$transaction(async (tx) => {
+      const org = await tx.organization.create({
+        data: { name: companyName },
+      });
+      const created = await tx.user.create({
+        data: {
+          name,
+          email,
+          passwordHash,
+          organizationId: org.id,
+          termsAcceptedVersion: TERMS_VERSION,
+          privacyAcceptedVersion: PRIVACY_VERSION,
+          termsAcceptedAt: acceptedAt,
+        },
+      });
+      await tx.agreementAcceptance.create({
+        data: {
+          userId: created.id,
+          organizationId: org.id,
+          termsVersion: TERMS_VERSION,
+          privacyVersion: PRIVACY_VERSION,
+          acceptedAt,
+          ipAddress,
+          userAgent,
+          marketingConsent,
+        },
+      });
+      return created;
     });
 
     return NextResponse.json({ ok: true, userId: user.id });

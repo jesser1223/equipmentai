@@ -62,6 +62,7 @@ model Organization {
   maintenanceRecords MaintenanceRecord[]
   stripeEvents   StripeEvent[]
   equipmentDocuments EquipmentDocument[]
+  agreements     AgreementAcceptance[]
 }
 
 model AuditLog {
@@ -84,8 +85,30 @@ model User {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   resetTokens    PasswordResetToken[]
+  agreements     AgreementAcceptance[]
+  termsAcceptedVersion   String?
+  privacyAcceptedVersion String?
+  termsAcceptedAt        DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model AgreementAcceptance {
+  id               String   @id @default(cuid())
+  termsVersion     String
+  privacyVersion   String
+  acceptedAt       DateTime @default(now())
+  ipAddress        String?
+  userAgent        String?
+  marketingConsent Boolean  @default(false)
+
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
 }
 
 model PasswordResetToken {

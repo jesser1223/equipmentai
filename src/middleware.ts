@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { accessMessage, canAccessApp } from "@/lib/access";
 
 const PUBLIC = ["/login", "/signup", "/forgot-password", "/reset-password", "/pending", "/denied"];
-const MARKETING = ["/features", "/how-it-works", "/pricing"];
+const MARKETING = ["/features", "/how-it-works", "/pricing", "/terms", "/privacy"];
 
 export default auth((req) => {
   const isLoggedIn = !!req.auth;

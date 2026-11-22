@@ -11,7 +11,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
-  const [error, setError] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -25,11 +26,15 @@ export default function SignupPage() {
       setError("Password must be at least 8 characters");
       return;
     }
+    if (!agreed) {
+      setError("You must agree to the Terms of Service and acknowledge the Privacy Policy.");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, companyName }),
+      body: JSON.stringify({ name, email, password, companyName, agreed: true, marketingConsent }),
     });
     const data = await res.json();
     setLoading(false);
@@ -73,14 +78,45 @@ export default function SignupPage() {
 
           <Field label="Confirm password" type={show ? "text" : "password"} value={confirm} onChange={setConfirm} required />
 
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-1"
+              required
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" className="text-accent hover:underline">Terms of Service</Link>
+              {" "}and acknowledge the{" "}
+              <Link href="/privacy" target="_blank" className="text-accent hover:underline">Privacy Policy</Link>.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-1"
+            />
+            <span>Send me optional product updates and marketing emails. This is not required to create an account.</span>
+          </label>
+
           <button
-            disabled={loading}
+            disabled={loading || !agreed || !name || !companyName || !email || !password || !confirm}
             className="w-full rounded-lg bg-accent py-2.5 text-sm font-medium text-accent-foreground disabled:opacity-50"
           >
             {loading ? "Creating account…" : "Create Account"}
           </button>
         </form>
 
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          <Link href="/terms" className="hover:underline">Terms of Service</Link>
+          {" · "}
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+        </p>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
           <Link href="/login" className="text-accent hover:underline">

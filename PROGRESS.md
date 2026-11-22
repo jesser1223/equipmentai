@@ -1,8 +1,9 @@
 ## Current Development Stage
-**Stage**: Equipment photo fixes  
-**Date**: 2026-11-07  
-**Status**: Attribution, upload display, confirmation, file signatures, and search limits added.
+**Stage**: Legal documents and mandatory signup agreement  
+**Date**: 2026-11-22  
+**Status**: Draft Terms and Privacy pages, footer links, signup checkbox, and server-side acceptance recording implemented. Not published as final legal text.
 
 ## Still required
-- Create private Supabase bucket equipment-photos if uploads are used.
-- Run npx prisma db push if photo fields are not in the database yet.
+- Confirm every bracketed placeholder before treating the documents as final.
+- Run `npx prisma db push` to add AgreementAcceptance and user acceptance fields.
+- Do not treat the legal pages as approved until the business name, address, contact emails, payment-processor details, hosting locations, retention rules, and cookie inventory are confirmed.
