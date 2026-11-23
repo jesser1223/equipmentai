@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [show, setShow] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
