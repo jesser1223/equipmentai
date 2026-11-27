@@ -120,6 +120,7 @@ model AgreementAcceptance {
 model AiConversation {
   id             String   @id @default(cuid())
   title          String?
+  context        Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

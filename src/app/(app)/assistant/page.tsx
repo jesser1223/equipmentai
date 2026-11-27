@@ -71,6 +71,8 @@ export default function AssistantPage() {
     rec.onresult = (e: any) => send(e.results[0][0].transcript);
     rec.start();
   };
+
+  const open = (c: any) => {
     setConversationId(c.id);
     setMessages(c.messages || []);
     setPending([]);
@@ -89,7 +91,7 @@ export default function AssistantPage() {
       <section className="flex min-h-[70vh] flex-col rounded-xl border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
           <h1 className="text-lg font-semibold">AI Assistant</h1>
-          <p className="text-xs text-muted-foreground">Ask EquipmentAI to create jobs, quotes, and draft invoices. Sending email and recording payments still need you.</p>
+          <p className="text-xs text-muted-foreground">Built-in assistant. No external AI key or per-message charge. Confirm before finishing a job.</p>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           {!messages.length && (

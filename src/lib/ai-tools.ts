@@ -33,6 +33,11 @@ export async function runTool(name: string, args: any, ctx: Ctx) {
     case "list_outstanding": return listOutstanding(ctx.organizationId);
     case "list_maintenance": return listMaintenance(ctx.organizationId);
     case "daily_briefing": return dailyBriefing(ctx.organizationId);
+    case "check_availability": return checkAvailability(ctx.organizationId, args.query);
+    case "schedule_maintenance": return scheduleMaintenance(ctx.organizationId, args);
+    case "add_equipment": return addEquipment(ctx.organizationId, args);
+    case "add_attachment": return addAttachment(ctx.organizationId, args);
+    case "create_invoice_from_job": return createInvoiceFromCompleted(ctx.organizationId, args);
     default: return { error: `Unknown tool: ${name}` };
   }
 }
@@ -283,6 +288,113 @@ async function listMaintenance(orgId: string) {
     select: { id: true, name: true, unitNumber: true, nextMaintenanceDue: true, hourMeter: true },
   });
   return { equipment };
+}
+
+async function checkAvailability(orgId: string, query?: string) {
+  const equipment = await prisma.equipment.findMany({
+    where: { organizationId: orgId, ...(query ? { name: { contains: query, mode: "insensitive" } } : {}) },
+    include: { jobs: { where: { status: { in: ["Scheduled", "In Progress"] } }, select: { title: true, startDate: true, status: true } } },
+    take: 15,
+  });
+  return {
+    equipment: equipment.map((e) => ({
+      name: e.name,
+      unitNumber: e.unitNumber,
+      status: e.status,
+      scheduledJobs: e.jobs,
+      available: e.status === "Available" && e.jobs.length === 0,
+    })),
+  };
+}
+
+async function scheduleMaintenance(orgId: string, args: any) {
+  const equipment = await findEquipment(orgId, args.equipmentName);
+  if (!equipment) return { error: `No equipment matching "${args.equipmentName}".` };
+  const date = args.date ? new Date(args.date) : null;
+  if (!date || isNaN(date.getTime())) return { error: "A valid service date is required." };
+  const record = await prisma.maintenanceRecord.create({
+    data: {
+      equipmentId: equipment.id,
+      organizationId: orgId,
+      serviceDate: date,
+      category: args.category || "Scheduled service",
+      description: args.notes || "Scheduled from assistant",
+      totalCost: 0,
+      nextServiceDate: date,
+    },
+  });
+  await prisma.equipment.update({ where: { id: equipment.id }, data: { nextMaintenanceDue: date } });
+  return { ok: true, equipment: equipment.name, date: date.toISOString(), recordId: record.id, link: "/maintenance" };
+}
+
+async function addEquipment(orgId: string, args: any) {
+  const name = String(args.name || "").trim();
+  const unitNumber = String(args.unitNumber || "").trim();
+  if (!name || !unitNumber) return { error: "Equipment name and unit number are required." };
+  const existing = await prisma.equipment.findFirst({ where: { organizationId: orgId, unitNumber } });
+  if (existing) return { error: `Unit number ${unitNumber} is already used.` };
+  const equipment = await prisma.equipment.create({
+    data: {
+      name,
+      unitNumber,
+      category: args.category || "Equipment",
+      hourlyRate: Number(args.hourlyRate || 0),
+      dailyRate: Number(args.dailyRate || 0),
+      organizationId: orgId,
+    },
+  });
+  return { ok: true, equipmentId: equipment.id, name: equipment.name, link: `/equipment/${equipment.id}` };
+}
+
+async function addAttachment(orgId: string, args: any) {
+  const equipment = await findEquipment(orgId, args.equipmentName);
+  if (!equipment) return { error: `No equipment matching "${args.equipmentName}".` };
+  const name = String(args.name || "").trim();
+  if (!name) return { error: "Attachment name is required." };
+  const attachment = await prisma.attachment.create({
+    data: {
+      name,
+      equipmentId: equipment.id,
+      organizationId: orgId,
+      rate: Number(args.rate || 0),
+      billingMethod: args.billingMethod || "hourly",
+    },
+  });
+  return { ok: true, attachmentId: attachment.id, name: attachment.name, equipment: equipment.name };
+}
+
+async function createInvoiceFromCompleted(orgId: string, args: any) {
+  const job = await findJob(orgId, args.jobQuery);
+  if (!job) return { error: "No matching job found." };
+  if (job.status !== "Completed") return { error: "The job must be completed before an invoice draft can be created." };
+  if (!job.actualHours) return { error: "That job has no saved actual hours." };
+  if (job.invoice) return { error: "That job already has an invoice." };
+  const org = await prisma.organization.findUnique({ where: { id: orgId } });
+  const charges = calculateJobCharges({
+    equipmentName: job.equipment?.name,
+    equipmentUnit: job.equipment?.unitNumber,
+    equipmentRate: job.quotedEquipmentRate || job.equipment?.hourlyRate || 0,
+    actualHours: job.actualHours,
+    taxRate: org?.taxRate || 0,
+  });
+  if (charges.missing.length) return { error: `Missing: ${charges.missing.join(", ")}.` };
+  const count = await prisma.invoice.count({ where: { organizationId: orgId } });
+  const number = `${org?.invoicePrefix || "INV"}-${String((org?.nextInvoiceNum || count + 1)).padStart(4, "0")}`;
+  const invoice = await prisma.invoice.create({
+    data: {
+      number,
+      status: "Draft",
+      organizationId: orgId,
+      customerId: job.customerId,
+      jobId: job.id,
+      subtotal: charges.subtotal,
+      taxRate: charges.taxRate,
+      taxAmount: charges.taxAmount,
+      total: charges.total,
+      lines: { create: charges.lines.map((l) => ({ description: l.description, quantity: l.quantity, unit: l.unit, rate: l.rate, amount: l.amount })) },
+    },
+  });
+  return { ok: true, invoiceId: invoice.id, invoiceNumber: invoice.number, total: invoice.total, status: "Draft", link: "/invoices" };
 }
 
 async function dailyBriefing(orgId: string) {
