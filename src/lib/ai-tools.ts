@@ -43,7 +43,7 @@ export async function runTool(name: string, args: any, ctx: Ctx) {
 }
 
 async function prepareConfirmation(tool: string, args: any, ctx: Ctx) {
-  const preview = tool === "prepare_job_completion"
+  const preview: any = tool === "prepare_job_completion"
     ? await previewCompletion(ctx.organizationId, args)
     : { args };
   if (preview.error) return preview;

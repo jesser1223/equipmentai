@@ -20,6 +20,7 @@ import {
   X,
   ClipboardList,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 const baseNav = [

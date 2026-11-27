@@ -86,7 +86,7 @@ export async function POST(req: Request) {
   }
 
   const tool = toolFor(parsed.intent);
-  const result = await runTool(tool, argsFor(parsed), { organizationId: orgId, userId, conversationId: conversation.id });
+  const result = await runTool(tool, argsFor(parsed), { organizationId: orgId, userId, conversationId: conversation.id }) as any;
   const reply = formatResult(parsed.intent, result);
   const nextContext: AssistantContext = {
     ...context,
