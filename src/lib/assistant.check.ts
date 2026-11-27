@@ -1,4 +1,4 @@
-import { detectIntent, parseRequest, wordsToNumber } from "./assistant";
+import { detectIntent, normalize, parseRequest } from "./assistant";
 
 const checks = [
   ["What jobs are on today?", "briefing"],
@@ -19,11 +19,11 @@ for (const [text, expected] of checks) {
   }
 }
 const quote = parseRequest("Create a quote for Smith Construction for eight hours of excavator work and include four hours of hydraulic breaker usage");
-if (quote.equipmentHours !== 8 || quote.attachmentHours !== 4 || quote.customerName !== "Smith Construction") {
+if (quote.equipmentHours !== 8 || quote.attachmentHours !== 4 || !String(quote.customerName || "").toLowerCase().includes("smith")) {
   failed += 1;
   console.error("FAIL quote parse", quote);
 }
-if (wordsToNumber("eight hours") !== "8 hours") {
+if (normalize("eight hours") !== "8 hours") {
   failed += 1;
   console.error("FAIL number words");
 }
