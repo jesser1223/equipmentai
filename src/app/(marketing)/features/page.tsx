@@ -1,4 +1,5 @@
 const features = [
+  ["AI assistant", "Create jobs, draft quotes, and prepare invoices by telling EquipmentAI what you need done. Emails and payments still wait for your confirmation."],
   ["Equipment and fleet management", "Keep each machine’s name, unit number, status, location, and hour meter in one list."],
   ["Equipment rates and attachments", "Set hourly, daily, and attachment rates, then use those rates on quotes and invoices."],
   ["Job scheduling and management", "Schedule jobs, assign equipment, and record actual hours when the work is finished."],

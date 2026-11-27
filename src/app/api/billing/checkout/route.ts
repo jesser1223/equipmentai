@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { stripe, STRIPE_PRICE_ID } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/trial";
 
 export async function POST() {
   const session = await auth();
@@ -34,14 +35,16 @@ export async function POST() {
     const successUrl = base.startsWith("http") ? `${base}/billing?success=1` : `https://${base}/billing?success=1`;
     const cancelUrl = base.startsWith("http") ? `${base}/billing?canceled=1` : `https://${base}/billing?canceled=1`;
 
+    const alreadyTrialed = !!(org.trialUsed || org.trialStart || org.trialEnd);
     const checkout = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       line_items: [{ price: STRIPE_PRICE_ID, quantity: 1 }],
       subscription_data: {
-        trial_period_days: org.trialEnd ? undefined : 14,
+        trial_period_days: alreadyTrialed ? undefined : TRIAL_DAYS,
         metadata: { organizationId: org.id },
       },
+      payment_method_collection: alreadyTrialed ? "always" : "if_required",
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: { organizationId: org.id },

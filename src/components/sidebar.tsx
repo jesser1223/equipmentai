@@ -24,6 +24,7 @@ import {
 
 const baseNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/assistant", label: "AI Assistant", icon: Sparkles },
   { href: "/schedule", label: "Schedule", icon: Calendar },
   { href: "/equipment", label: "Equipment", icon: Truck },
   { href: "/maintenance", label: "Maintenance", icon: ClipboardList },

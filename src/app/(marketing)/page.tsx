@@ -34,10 +34,10 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
           <div className="relative z-10">
             <p className="text-sm font-medium text-accent">EquipmentAI</p>
-            <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">Run Your Equipment Business. All in One Place.</h1>
-            <p className="mt-4 text-lg text-white">Manage equipment, schedule jobs, track maintenance, create quotes and send invoices — all from one simple platform built for equipment contractors.</p>
+            <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">Run your equipment business with AI.</h1>
+            <p className="mt-4 text-lg text-white">Create jobs, generate quotes, prepare invoices, schedule equipment and manage your business simply by telling EquipmentAI what you need done.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/signup" className="rounded-lg bg-accent px-5 py-3 text-sm font-medium text-accent-foreground hover:opacity-90">Start Your Free Trial</Link>
+              <Link href="/signup" className="rounded-lg bg-accent px-5 py-3 text-sm font-medium text-accent-foreground hover:opacity-90">Start Your 30-Day Free Trial</Link>
               <Link href="/features" className="rounded-lg border border-border px-5 py-3 text-sm hover:bg-white/5">Explore Features</Link>
             </div>
           </div>

@@ -72,7 +72,7 @@ export default function BillingPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        14-day free trial. No card required to start. After trial, a payment method is required. Failed payments have a 7-day grace period. Cancellation keeps access until the end of the paid period. Data is never deleted.
+        30-day free trial. No card required to start. After trial, a payment method is required. Failed payments have a 7-day grace period. Cancellation keeps access until the end of the paid period. Data is never deleted.
       </p>
     </div>
   );

@@ -6,6 +6,7 @@ const included = [
   "Maintenance tracking",
   "Equipment documents",
   "Payment recording and receipts",
+  "AI assistant for jobs, quotes, and invoices",
   "Optional invoice email and overdue reminders",
 ];
 
@@ -18,7 +19,7 @@ export default function PricingPage() {
         <div className="text-sm text-accent">EquipmentAI</div>
         <div className="mt-2 text-4xl font-semibold">$149 CAD</div>
         <div className="text-sm text-white">per company / month</div>
-        <p className="mt-4 text-sm text-white">14-day free trial. No credit card required to start. After the trial, add a payment method to continue.</p>
+        <p className="mt-4 text-sm text-white">30-day free trial. No credit card required to start. After the trial, add a payment method to continue.</p>
         <ul className="mt-6 space-y-2 text-sm">
           {included.map((item) => <li key={item}>• {item}</li>)}
         </ul>

@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isConfiguredOwner } from "@/lib/owner";
+import { trialStartUpdate } from "@/lib/trial";
 
 async function requireOwner() {
   const session = await auth();
@@ -20,9 +21,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const updates: any = {};
   if (action === "approve") {
+    const existing = await prisma.organization.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     updates.status = "Approved";
     updates.approvedAt = new Date();
     updates.approvedById = authResult.userId;
+    const trial = trialStartUpdate(existing);
+    if (trial) Object.assign(updates, trial);
   } else if (action === "deny") {
     updates.status = "Denied";
     updates.deniedAt = new Date();
