@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { blockedOrganizationResponse } from "@/lib/access-guard";
 import { prisma } from "@/lib/prisma";
-import { billingAccess } from "@/lib/billing";
+import { assistantEntitlementUpdate, billingAccess } from "@/lib/billing";
+import { isConfiguredOwner } from "@/lib/owner";
 import { runTool, executeConfirmedAction } from "@/lib/ai-tools";
 import { AssistantContext, parseRequest } from "@/lib/assistant";
 
@@ -32,8 +33,13 @@ export async function POST(req: Request) {
 
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-  const access = billingAccess(org);
-  if (!access.allowed) return NextResponse.json({ error: access.message }, { status: 402 });
+  const entitlement = assistantEntitlementUpdate(org);
+  const current = Object.keys(entitlement.updates).length
+    ? await prisma.organization.update({ where: { id: org.id }, data: entitlement.updates })
+    : org;
+  const access = entitlement.access.allowed ? entitlement.access : billingAccess(current);
+  const platformOwnerTesting = isConfiguredOwner(userId) && current.status === "Approved" && access.reason !== "trial-ended" && access.reason !== "grace-expired";
+  if (!access.allowed && !platformOwnerTesting) return NextResponse.json({ error: access.message }, { status: 402 });
 
   const body = await req.json();
   const message = String(body.message || "").trim();
