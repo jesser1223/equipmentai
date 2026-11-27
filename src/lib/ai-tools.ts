@@ -38,6 +38,9 @@ export async function runTool(name: string, args: any, ctx: Ctx) {
     case "add_equipment": return addEquipment(ctx.organizationId, args);
     case "add_attachment": return addAttachment(ctx.organizationId, args);
     case "create_invoice_from_job": return createInvoiceFromCompleted(ctx.organizationId, args);
+    case "reschedule_job": return rescheduleJob(ctx.organizationId, args);
+    case "get_rates": return getRates(ctx.organizationId, args);
+    case "convert_quote": return convertQuote(ctx.organizationId, args);
     default: return { error: `Unknown tool: ${name}` };
   }
 }
@@ -395,6 +398,45 @@ async function createInvoiceFromCompleted(orgId: string, args: any) {
     },
   });
   return { ok: true, invoiceId: invoice.id, invoiceNumber: invoice.number, total: invoice.total, status: "Draft", link: "/invoices" };
+}
+
+async function rescheduleJob(orgId: string, args: any) {
+  const job = await findJob(orgId, args.jobQuery || args.customerName);
+  if (!job) return { error: "No matching job found." };
+  if (!args.startDate) return { error: "A new date is required." };
+  const updated = await prisma.job.update({ where: { id: job.id }, data: { startDate: new Date(args.startDate) } });
+  return { ok: true, title: updated.title, startDate: updated.startDate, link: "/schedule" };
+}
+
+async function getRates(orgId: string, args: any) {
+  const equipment = args.equipmentName || args.query ? await findEquipment(orgId, args.equipmentName || args.query) : null;
+  if (equipment) return { equipment: equipment.name, hourlyRate: equipment.hourlyRate, dailyRate: equipment.dailyRate };
+  return searchEquipment(orgId, args.query);
+}
+
+async function convertQuote(orgId: string, args: any) {
+  const quote = await prisma.quote.findFirst({
+    where: { organizationId: orgId, OR: [{ jobName: { contains: args.jobQuery || args.customerName || "", mode: "insensitive" } }, { customer: { name: { contains: args.customerName || "", mode: "insensitive" } } }] },
+    include: { job: true, lines: true, customer: true },
+  });
+  if (!quote) return { error: "No matching quote found." };
+  if (quote.job) return { error: "That quote is already a job." };
+  if (quote.status !== "Accepted") return { error: "Accept the quote before converting it to a job." };
+  const equipmentLine = quote.lines.find((l) => l.lineType === "equipment");
+  const job = await prisma.job.create({
+    data: {
+      title: quote.jobName,
+      organizationId: orgId,
+      customerId: quote.customerId,
+      quoteId: quote.id,
+      equipmentId: equipmentLine?.equipmentId || null,
+      startDate: args.startDate ? new Date(args.startDate) : quote.proposedDate,
+      location: quote.location,
+      status: "Scheduled",
+      quotedEquipmentRate: equipmentLine?.rate ?? null,
+    },
+  });
+  return { ok: true, title: job.title, jobId: job.id, link: "/schedule" };
 }
 
 async function dailyBriefing(orgId: string) {

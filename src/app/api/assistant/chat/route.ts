@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assistantEntitlementUpdate, billingAccess } from "@/lib/billing";
 import { isConfiguredOwner } from "@/lib/owner";
 import { runTool, executeConfirmedAction } from "@/lib/ai-tools";
-import { AssistantContext, parseRequest } from "@/lib/assistant";
+import { AssistantContext, missingFor, parseRequest, questionFor } from "@/lib/assistant";
 
 function replyFor(result: any, fallback: string) {
   if (result?.error) return result.error;
@@ -51,7 +51,18 @@ export async function POST(req: Request) {
   if (!conversation) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
 
   const context = (conversation.context || {}) as AssistantContext;
-  const parsed = parseRequest(message, context);
+  const [customers, equipment, attachments] = await Promise.all([
+    prisma.customer.findMany({ where: { organizationId: orgId, archivedAt: null }, select: { name: true }, take: 100 }),
+    prisma.equipment.findMany({ where: { organizationId: orgId }, select: { name: true, unitNumber: true }, take: 100 }),
+    prisma.attachment.findMany({ where: { organizationId: orgId }, select: { name: true }, take: 100 }),
+  ]);
+  const records = {
+    customers: customers.map((c) => c.name),
+    equipment: equipment.flatMap((e) => [e.name, e.unitNumber].filter(Boolean) as string[]),
+    attachments: attachments.map((a) => a.name),
+  };
+  const parsed = parseRequest(message, context, records);
+  if (records.equipment.length === 1 && parsed.intent === "create_job" && !parsed.equipmentName) parsed.equipmentName = records.equipment[0];
   await prisma.aiMessage.create({ data: { conversationId: conversation.id, role: "user", content: message } });
 
   if (parsed.intent === "confirm") {
@@ -82,18 +93,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ conversationId: conversation.id, reply });
   }
 
-  const missing = missingFor(parsed);
-  if (missing) {
-    const next = { ...context, awaiting: missing, draft: parsed, lastCustomer: parsed.customerName, lastEquipment: parsed.equipmentName, lastJob: parsed.jobQuery };
+  const missing = missingFor(parsed, records);
+  if (missing && parsed.intent !== "confirm" && parsed.intent !== "cancel" && parsed.intent !== "help") {
+    const next = { ...context, awaiting: missing, draft: parsed, lastCustomer: parsed.customerName, lastEquipment: parsed.equipmentName, lastJob: parsed.jobQuery, lastIntent: parsed.intent };
     await prisma.aiConversation.update({ where: { id: conversation.id }, data: { context: next } });
-    const reply = `I need the ${missing.replace(/([A-Z])/g, " $1").toLowerCase()} before I can do that.`;
+    const reply = questionFor(missing);
     await prisma.aiMessage.create({ data: { conversationId: conversation.id, role: "assistant", content: reply } });
     return NextResponse.json({ conversationId: conversation.id, reply });
   }
 
   const tool = toolFor(parsed.intent);
   const result = await runTool(tool, argsFor(parsed), { organizationId: orgId, userId, conversationId: conversation.id }) as any;
-  const reply = formatResult(parsed.intent, result);
+  const reply = formatResult(parsed.intent, result, parsed);
   const nextContext: AssistantContext = {
     ...context,
     awaiting: undefined,
@@ -117,6 +128,7 @@ function toolFor(intent: string) {
     outstanding: "list_outstanding",
     maintenance: "list_maintenance",
     availability: "check_availability",
+    rates: "get_rates",
     find_customer: "search_customers",
     find_job: "search_jobs",
     find_equipment: "search_equipment",
@@ -128,26 +140,13 @@ function toolFor(intent: string) {
     schedule_maintenance: "schedule_maintenance",
     add_equipment: "add_equipment",
     add_attachment: "add_attachment",
+    reschedule_job: "reschedule_job",
+    convert_quote: "convert_quote",
   };
   return map[intent] || "daily_briefing";
 }
 
-function missingFor(parsed: any) {
-  if (parsed.intent === "create_customer" && !parsed.name && !parsed.customerName) return "customerName";
-  if (parsed.intent === "create_job" && !parsed.customerName) return "customerName";
-  if (parsed.intent === "create_quote" && !parsed.customerName) return "customerName";
-  if (parsed.intent === "create_quote" && !parsed.equipmentName) return "equipmentName";
-  if (parsed.intent === "create_quote" && !parsed.equipmentHours) return "equipmentHours";
-  if (parsed.intent === "complete_job" && !parsed.jobQuery) return "jobQuery";
-  if (parsed.intent === "complete_job" && !parsed.equipmentHours) return "actualHours";
-  if (parsed.intent === "schedule_maintenance" && !parsed.equipmentName) return "equipmentName";
-  if (parsed.intent === "schedule_maintenance" && !parsed.date) return "date";
-  if (parsed.intent === "add_equipment" && !parsed.name) return "equipmentName";
-  if (parsed.intent === "add_attachment" && !parsed.equipmentName) return "equipmentName";
-  return null;
-}
-
-function formatResult(intent: string, result: any) {
+function formatResult(intent: string, result: any, parsed: any) {
   if (result?.error) return result.error;
   if (result?.confirmationRequired) return "I prepared the job completion and draft invoice. Confirm it before anything is saved.";
   if (intent === "briefing") return `Today: ${(result.today || []).map((j: any) => j.title).join(", ") || "no jobs"}. Outstanding: $${result.outstandingTotal || 0}. Maintenance due: ${result.maintenanceDue || 0}.`;
@@ -156,6 +155,7 @@ function formatResult(intent: string, result: any) {
   if (intent === "availability") return (result.equipment || []).map((e: any) => `${e.name}: ${e.available ? "available" : e.status}`).join("; ") || "No matching equipment.";
   if (result?.number) return `Draft quote ${result.number} is ready. Total $${result.total}.`;
   if (result?.invoiceNumber) return `Draft invoice ${result.invoiceNumber} is ready. Total $${result.total}.`;
-  if (result?.ok) return `Done. ${result.name || result.title || result.equipment || "Saved"}.`;
+  if (intent === "create_job" && result?.ok) return `I've scheduled ${parsed.customerName || "the"} job${parsed.startDate ? ` for ${new Date(parsed.startDate).toLocaleDateString()}` : ""}${parsed.startTime ? ` at ${parsed.startTime}` : ""}${parsed.equipmentName ? ` using the ${parsed.equipmentName}` : ""}.`;
+  if (intent === "rates" && result?.hourlyRate != null) return `${result.equipment} is $${result.hourlyRate}/hour${result.dailyRate ? ` and $${result.dailyRate}/day` : ""}.`;
   return JSON.stringify(result);
 }

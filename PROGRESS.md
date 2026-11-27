@@ -1,8 +1,8 @@
 ## Current Development Stage
-**Stage**: Built-in assistant, no external AI API  
+**Stage**: Built-in assistant intelligence overhaul  
 **Date**: 2026-11-26  
-**Status**: Grok API dependency removed. Assistant uses local intent parsing and existing business logic. 30-day trial unchanged.
+**Status**: Replaced rigid keyword parser with domain NLU, fuzzy company-record matching, and conversation state. No external AI API.
 
-## Still required
-- Run `npx prisma db push` if the AI context field is not in the database yet.
-- No XAI_API_KEY is required.
+## Checks
+- 208 interpretation cases passed at 100%.
+- End-to-end database actions still require the live app and were not executed here.
